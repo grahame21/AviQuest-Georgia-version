@@ -1,6 +1,8 @@
 "use strict";
 
 const STORAGE_KEY = "ggAdventureArSpotsV1";
+const PERMISSION_SETUP_KEY = "aviquestArPermissionsReadyV1";
+const CAMERA_DEVICE_KEY = "aviquestRearCameraDeviceV1";
 const FETCH_INTERVAL_MS = 10000;
 const HORIZONTAL_FOV = 62;
 const VERTICAL_FOV = 48;
@@ -28,7 +30,10 @@ const state = {
   photoCache: new Map(),
   photoRequests: new Map(),
   markerNodes: new Map(),
-  detailRequestToken: 0
+  detailRequestToken: 0,
+  routeCache: new Map(),
+  routeRequests: new Map(),
+  cameraRestarting: false
 };
 
 const elements = {
@@ -46,13 +51,20 @@ const elements = {
   nearestMeta: document.getElementById("nearestMeta"),
   calibrateButton: document.getElementById("calibrateButton"),
   refreshButton: document.getElementById("refreshButton"),
-  radiusButton: document.getElementById("radiusButton"),
-  radiusValue: document.getElementById("radiusValue"),
+  cameraButton: document.getElementById("cameraButton"),
+  permissionSummary: document.getElementById("permissionSummary"),
   logButton: document.getElementById("logButton"),
   aircraftSheet: document.getElementById("aircraftSheet"),
   closeAircraftSheet: document.getElementById("closeAircraftSheet"),
   detailName: document.getElementById("detailName"),
   detailDescription: document.getElementById("detailDescription"),
+  detailFlight: document.getElementById("detailFlight"),
+  detailAirline: document.getElementById("detailAirline"),
+  detailOriginCode: document.getElementById("detailOriginCode"),
+  detailOriginName: document.getElementById("detailOriginName"),
+  detailDestinationCode: document.getElementById("detailDestinationCode"),
+  detailDestinationName: document.getElementById("detailDestinationName"),
+  detailRouteStatus: document.getElementById("detailRouteStatus"),
   detailRegistration: document.getElementById("detailRegistration"),
   detailType: document.getElementById("detailType"),
   detailDistance: document.getElementById("detailDistance"),
@@ -352,47 +364,189 @@ async function requestOrientationAccess() {
   }
 }
 
-async function requestCameraAccess() {
+async function waitForVideoFrame(video, timeoutMs = 9000) {
+  return new Promise((resolve, reject) => {
+    let finished = false;
+    const cleanup = () => {
+      video.removeEventListener("loadeddata", check);
+      video.removeEventListener("canplay", check);
+      video.removeEventListener("playing", check);
+    };
+    const finish = (error) => {
+      if (finished) return;
+      finished = true;
+      window.clearTimeout(timer);
+      cleanup();
+      error ? reject(error) : resolve();
+    };
+    const check = async () => {
+      try {
+        await video.play();
+        if (video.videoWidth > 0 && video.videoHeight > 0 && video.readyState >= 2) {
+          window.setTimeout(() => finish(), 180);
+        }
+      } catch (error) {
+        finish(error);
+      }
+    };
+    const timer = window.setTimeout(
+      () => finish(new Error("The camera connected but Safari did not deliver a video frame.")),
+      timeoutMs
+    );
+    video.addEventListener("loadeddata", check);
+    video.addEventListener("canplay", check);
+    video.addEventListener("playing", check);
+    check();
+  });
+}
+
+async function findRearCameraDevice() {
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const cameras = devices.filter((device) => device.kind === "videoinput");
+    if (!cameras.length) return null;
+    const savedId = localStorage.getItem(CAMERA_DEVICE_KEY);
+    if (savedId && cameras.some((camera) => camera.deviceId === savedId)) return savedId;
+    const rear = cameras.find((camera) => /back|rear|environment|wide/i.test(camera.label));
+    return (rear || cameras[cameras.length - 1]).deviceId || null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function cameraTrackIsLive() {
+  const track = state.stream?.getVideoTracks?.()[0];
+  return Boolean(track && track.readyState === "live");
+}
+
+async function attachCameraStream(stream) {
+  state.stream = stream;
+  const track = stream.getVideoTracks()[0];
+  if (track?.getSettings) {
+    const settings = track.getSettings();
+    if (settings.deviceId) localStorage.setItem(CAMERA_DEVICE_KEY, settings.deviceId);
+  }
+
+  elements.camera.autoplay = true;
+  elements.camera.muted = true;
+  elements.camera.playsInline = true;
+  elements.camera.setAttribute("autoplay", "");
+  elements.camera.setAttribute("muted", "");
+  elements.camera.setAttribute("playsinline", "");
+  elements.camera.setAttribute("webkit-playsinline", "true");
+  elements.camera.srcObject = stream;
+  await waitForVideoFrame(elements.camera);
+  elements.camera.classList.add("camera-live");
+  return stream;
+}
+
+async function requestCameraAccess(forceRestart = false) {
   if (!navigator.mediaDevices?.getUserMedia) {
     throw new Error("This browser cannot open the camera.");
   }
 
+  if (!forceRestart && cameraTrackIsLive() && elements.camera.videoWidth > 0) {
+    await elements.camera.play().catch(() => {});
+    return state.stream;
+  }
+
   stopCamera();
-  elements.camera.setAttribute("autoplay", "");
-  elements.camera.setAttribute("muted", "");
-  elements.camera.setAttribute("playsinline", "");
-  elements.camera.muted = true;
+  let stream = null;
+  const savedDevice = await findRearCameraDevice();
+  const attempts = [];
 
-  let stream;
+  if (savedDevice) {
+    attempts.push({
+      audio: false,
+      video: {
+        deviceId: { exact: savedDevice },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 }
+      }
+    });
+  }
+
+  attempts.push(
+    {
+      audio: false,
+      video: {
+        facingMode: { exact: "environment" },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 }
+      }
+    },
+    {
+      audio: false,
+      video: {
+        facingMode: { ideal: "environment" },
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      }
+    },
+    { audio: false, video: true }
+  );
+
+  let lastError = null;
+  for (const constraints of attempts) {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia(constraints);
+      await attachCameraStream(stream);
+      return stream;
+    } catch (error) {
+      lastError = error;
+      if (stream) stream.getTracks().forEach((track) => track.stop());
+      stream = null;
+      elements.camera.srcObject = null;
+    }
+  }
+
+  throw new Error(
+    lastError?.message ||
+    "The camera is allowed but no usable rear-camera picture was received."
+  );
+}
+
+async function restartCamera() {
+  if (state.cameraRestarting) return;
+  state.cameraRestarting = true;
+  if (elements.cameraButton) {
+    elements.cameraButton.disabled = true;
+    elements.cameraButton.querySelector("span").textContent = "Restarting";
+  }
   try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      audio: false,
-      video: { facingMode: { exact: "environment" } }
-    });
-  } catch (rearError) {
-    stream = await navigator.mediaDevices.getUserMedia({
-      audio: false,
-      video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } }
-    });
+    await requestCameraAccess(true);
+    showToast("Rear camera restarted.");
+  } catch (error) {
+    showToast(`Camera restart failed: ${error.message}`, 6000);
+  } finally {
+    state.cameraRestarting = false;
+    if (elements.cameraButton) {
+      elements.cameraButton.disabled = false;
+      elements.cameraButton.querySelector("span").textContent = "Camera";
+    }
   }
+}
 
-  state.stream = stream;
-  elements.camera.srcObject = stream;
-  await new Promise((resolve, reject) => {
-    const timer = window.setTimeout(() => reject(new Error("Camera opened but no video frame arrived.")), 7000);
-    const ready = async () => {
-      window.clearTimeout(timer);
-      try { await elements.camera.play(); resolve(); } catch (error) { reject(error); }
-    };
-    if (elements.camera.readyState >= 2 && elements.camera.videoWidth > 0) ready();
-    else elements.camera.addEventListener("loadedmetadata", ready, { once: true });
-  });
 
-  if (!elements.camera.videoWidth || !elements.camera.videoHeight) {
-    stopCamera();
-    throw new Error("The rear camera stream is black. Close other camera apps, reload Safari and try again.");
+async function permissionState(name) {
+  try {
+    if (!navigator.permissions?.query) return "unknown";
+    return (await navigator.permissions.query({ name })).state;
+  } catch (error) {
+    return "unknown";
   }
-  return stream;
+}
+
+async function updatePermissionSummary() {
+  if (!elements.permissionSummary) return;
+  const [camera, location] = await Promise.all([
+    permissionState("camera"),
+    permissionState("geolocation")
+  ]);
+  const readable = (value) => value === "granted" ? "allowed" :
+    value === "denied" ? "blocked" : value === "prompt" ? "not decided" : "managed by Safari";
+  elements.permissionSummary.textContent =
+    `Camera: ${readable(camera)} • Location: ${readable(location)} • Motion: checked when AR starts`;
 }
 
 function requestInitialLocation() {
@@ -479,6 +633,7 @@ async function requestWakeLock() {
 async function startLiveAr() {
   elements.startButton.disabled = true;
   elements.startButton.textContent = "Starting…";
+  await updatePermissionSummary();
   elements.startMessage.textContent = "Opening camera, GPS and compass…";
   setStatus(elements.gpsStatus, "GPS…", "waiting");
   setStatus(elements.compassStatus, "Compass…", "waiting");
@@ -524,6 +679,7 @@ async function startLiveAr() {
   }
 
   state.active = true;
+  localStorage.setItem(PERMISSION_SETUP_KEY, "yes");
   elements.startPanel.classList.add("hidden");
   await requestWakeLock();
   await fetchNearbyAircraft();
@@ -536,6 +692,7 @@ function stopCamera() {
     state.stream.getTracks().forEach((track) => track.stop());
     state.stream = null;
     elements.camera.srcObject = null;
+    elements.camera.classList.remove("camera-live");
   }
 }
 
@@ -755,10 +912,80 @@ function findAircraft(id) {
   return state.aircraft.find((aircraft) => aircraft.id === id) || null;
 }
 
+
+function routeDisplayCode(airport) {
+  return cleanText(airport?.iata_code || airport?.icao_code).toUpperCase() || "—";
+}
+
+function routeDisplayName(airport) {
+  return cleanText(airport?.municipality || airport?.name || airport?.icao_code) || "Unknown airport";
+}
+
+async function loadFlightRoute(aircraft) {
+  const callsign = cleanText(aircraft.callsign).replace(/\s+/g, "").toUpperCase();
+  if (!callsign) return null;
+  if (state.routeCache.has(callsign)) return state.routeCache.get(callsign);
+  if (state.routeRequests.has(callsign)) return state.routeRequests.get(callsign);
+
+  const request = (async () => {
+    try {
+      const url = new URL("/.netlify/functions/flight-route", window.location.origin);
+      url.searchParams.set("callsign", callsign);
+      const response = await fetch(url, { cache: "no-store" });
+      const data = await response.json();
+      const route = response.ok && data?.ok ? data : null;
+      state.routeCache.set(callsign, route);
+      return route;
+    } catch (error) {
+      state.routeCache.set(callsign, null);
+      return null;
+    } finally {
+      state.routeRequests.delete(callsign);
+    }
+  })();
+
+  state.routeRequests.set(callsign, request);
+  return request;
+}
+
+function resetRouteDetails(aircraft) {
+  elements.detailFlight.textContent = cleanText(aircraft.callsign) || "Unknown";
+  elements.detailAirline.textContent = "Looking up…";
+  elements.detailOriginCode.textContent = "—";
+  elements.detailOriginName.textContent = "Origin unavailable";
+  elements.detailDestinationCode.textContent = "—";
+  elements.detailDestinationName.textContent = "Destination unavailable";
+  elements.detailRouteStatus.textContent = cleanText(aircraft.callsign)
+    ? "Looking up the published route…"
+    : "A callsign is needed to look up origin and destination.";
+}
+
+function applyRouteDetails(route) {
+  const flight = route?.flightroute;
+  if (!flight) {
+    elements.detailAirline.textContent = "Unavailable";
+    elements.detailRouteStatus.textContent =
+      "No matching published route was found. ADS-B positions do not always include origin and destination.";
+    return;
+  }
+  elements.detailFlight.textContent =
+    cleanText(flight.callsign_iata || flight.callsign_icao || flight.callsign) ||
+    elements.detailFlight.textContent;
+  elements.detailAirline.textContent = cleanText(flight.airline?.name) || "Unknown airline";
+  elements.detailOriginCode.textContent = routeDisplayCode(flight.origin);
+  elements.detailOriginName.textContent = routeDisplayName(flight.origin);
+  elements.detailDestinationCode.textContent = routeDisplayCode(flight.destination);
+  elements.detailDestinationName.textContent = routeDisplayName(flight.destination);
+  const midpoint = flight.midpoint ? ` via ${routeDisplayCode(flight.midpoint)}` : "";
+  elements.detailRouteStatus.textContent =
+    `${routeDisplayCode(flight.origin)} → ${routeDisplayCode(flight.destination)}${midpoint}`;
+}
+
 function openAircraftSheet(aircraft) {
   const requestToken = ++state.detailRequestToken;
   state.selectedId = aircraft.id;
   elements.detailName.textContent = displayName(aircraft);
+  resetRouteDetails(aircraft);
   elements.detailDescription.textContent = cleanText(aircraft.description) || "Live ADS-B aircraft position";
   elements.detailRegistration.textContent = cleanText(aircraft.registration) || "Unknown";
   elements.detailType.textContent = cleanText(aircraft.type) || "Unknown";
@@ -779,6 +1006,12 @@ function openAircraftSheet(aircraft) {
   closeAllSheets(false);
   state.selectedId = aircraft.id;
   elements.aircraftSheet.classList.remove("hidden");
+
+  loadFlightRoute(aircraft).then((route) => {
+    if (requestToken !== state.detailRequestToken || state.selectedId !== aircraft.id ||
+        elements.aircraftSheet.classList.contains("hidden")) return;
+    applyRouteDetails(route);
+  });
 
   if (!photo) {
     loadAircraftPhoto(aircraft).then((loaded) => {
@@ -828,6 +1061,12 @@ function markSelectedAircraftSpotted() {
       observerLongitude: state.user?.longitude ?? null,
       aircraftLatitude: numericOrNull(aircraft.lat),
       aircraftLongitude: numericOrNull(aircraft.lon),
+      flight: elements.detailFlight?.textContent || cleanText(aircraft.callsign),
+      airline: elements.detailAirline?.textContent || "",
+      originCode: elements.detailOriginCode?.textContent || "",
+      originName: elements.detailOriginName?.textContent || "",
+      destinationCode: elements.detailDestinationCode?.textContent || "",
+      destinationName: elements.detailDestinationName?.textContent || "",
       source: state.source
     });
     saveSpots(spots);
@@ -923,7 +1162,11 @@ function calibrateHorizon() {
 
 function cycleRadius() {
   state.radiusIndex = (state.radiusIndex + 1) % RADIUS_OPTIONS.length;
-  elements.radiusValue.textContent = String(currentRadius());
+  updatePermissionSummary();
+if (localStorage.getItem(PERMISSION_SETUP_KEY) === "yes") {
+  elements.startButton.textContent = "Resume Live AR";
+  elements.startMessage.textContent = "Previous access is remembered by AviQuest. Safari will only prompt again if the website permission was set to Ask or Allow Once.";
+}
   showToast(`Search radius changed to ${currentRadius()} kilometres.`);
   fetchNearbyAircraft();
 }
@@ -940,9 +1183,16 @@ function handleMarkerClick(event) {
   if (aircraft) openAircraftSheet(aircraft);
 }
 
-function handleVisibilityChange() {
+async function handleVisibilityChange() {
   if (document.visibilityState === "visible" && state.active) {
     requestWakeLock();
+    if (!cameraTrackIsLive() || !elements.camera.videoWidth) {
+      await requestCameraAccess(true).catch((error) => {
+        showToast(`Camera needs attention: ${error.message}`, 5200);
+      });
+    } else {
+      elements.camera.play().catch(() => {});
+    }
     fetchNearbyAircraft();
   }
 }
@@ -962,7 +1212,7 @@ elements.startButton.addEventListener("click", startLiveAr);
 elements.markers.addEventListener("click", handleMarkerClick);
 elements.calibrateButton.addEventListener("click", calibrateHorizon);
 elements.refreshButton.addEventListener("click", fetchNearbyAircraft);
-elements.radiusButton.addEventListener("click", cycleRadius);
+elements.cameraButton.addEventListener("click", restartCamera);
 elements.logButton.addEventListener("click", openSpotLog);
 elements.closeAircraftSheet.addEventListener("click", () => closeAllSheets(true));
 elements.closeLogSheet.addEventListener("click", () => closeAllSheets(true));
@@ -973,6 +1223,10 @@ elements.helpButton.addEventListener("click", openHelp);
 elements.closeHelpSheet.addEventListener("click", () => closeAllSheets(true));
 document.addEventListener("visibilitychange", handleVisibilityChange);
 window.addEventListener("pagehide", cleanUp);
-window.addEventListener("beforeunload", cleanUp);
 
-elements.radiusValue.textContent = String(currentRadius());
+
+updatePermissionSummary();
+if (localStorage.getItem(PERMISSION_SETUP_KEY) === "yes") {
+  elements.startButton.textContent = "Resume Live AR";
+  elements.startMessage.textContent = "Previous access is remembered by AviQuest. Safari will only prompt again if the website permission was set to Ask or Allow Once.";
+}
