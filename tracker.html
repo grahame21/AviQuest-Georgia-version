@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#06111d" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>AviQuest Live Aviation</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="tracker.css?v=3" />
+</head>
+<body>
+  <header class="tracker-header">
+    <button id="backBtn" class="round-button" type="button" aria-label="Back to AviQuest">‹</button>
+    <div><small>GG’S ADVENTURE</small><h1>Live Aviation</h1></div>
+    <button id="refreshBtn" class="round-button" type="button" aria-label="Refresh aircraft">↻</button>
+  </header>
+
+  <nav class="mode-tabs" aria-label="Live aviation mode">
+    <button class="active" type="button">Flight Tracker</button>
+    <button id="topArBtn" type="button">AR Spotter</button>
+  </nav>
+
+  <section class="search-panel">
+    <label class="search-box">
+      <span class="search-icon">⌕</span>
+      <input id="searchInput" type="search" autocomplete="off"
+        placeholder="Flight, registration, airline or airport" />
+      <button id="locateBtn" class="search-action" type="button" aria-label="My location" title="My location">◎</button>
+      <button id="favouritesBtn" class="search-action" type="button" aria-label="Favourites" title="Favourites">★<i id="favouriteCount">0</i></button>
+      <button id="savedBtn" class="search-action" type="button" aria-label="Saved" title="Saved">▣<i id="savedCount">0</i></button>
+      <button id="clearSearch" class="search-action clear-action" type="button" aria-label="Clear search">×</button>
+    </label>
+  </section>
+
+  <main>
+    <div id="map" aria-label="Global live aircraft map"></div>
+
+    <div class="status-pill">
+      <span id="liveDot" class="live-dot"></span>
+      <b id="statusText">Loading aircraft…</b>
+      <span id="aircraftCount">0</span>
+    </div>
+
+    <button id="listToggle" class="list-toggle" type="button">
+      Nearby <span id="listCount">0</span>
+    </button>
+
+    <aside id="aircraftList" class="aircraft-list" aria-label="Nearby aircraft"></aside>
+
+    <section id="detailsPanel" class="details-panel hidden" aria-live="polite">
+      <button id="closeDetails" class="close-button" type="button" aria-label="Close details">×</button>
+      <div class="details-top">
+        <img id="aircraftPhoto" src="images/aircraft-placeholder.svg" alt="Aircraft preview" />
+        <div>
+          <small id="detailStatus">LIVE</small>
+          <h2 id="detailCallsign">Aircraft</h2>
+          <p id="detailReg">Registration unavailable</p>
+        </div>
+      </div>
+      <div class="detail-actions favourite-actions">
+        <button id="saveFavourite" type="button">☆ Favourite</button>
+        <button id="saveItem" type="button">▣ Save</button>
+      </div>
+      <div class="detail-grid">
+        <div><small>Aircraft</small><b id="detailType">Unknown</b></div>
+        <div><small>Distance</small><b id="detailDistance">—</b></div>
+        <div><small>Altitude</small><b id="detailAltitude">—</b></div>
+        <div><small>Speed</small><b id="detailSpeed">—</b></div>
+        <div><small>Heading</small><b id="detailHeading">—</b></div>
+        <div><small>Updated</small><b id="detailSeen">—</b></div>
+      </div>
+      <div class="detail-actions">
+        <button id="centreAircraft" type="button">Centre</button>
+        <button id="openAr" class="primary" type="button">Open in AR</button>
+      </div>
+    </section>
+  </main>
+
+  <button id="navA7" class="a7-fab" type="button" aria-label="Find A7-BAF">★ A7-BAF</button>
+
+  <span id="navNearby" hidden></span>
+  <span id="navAr" hidden></span>
+  <span id="navHome" hidden></span>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="tracker.js?v=3"></script>
+</body>
+</html>

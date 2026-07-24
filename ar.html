@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+  <meta name="theme-color" content="#020b12" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="GG’s Adventure" />
+  <title>Live AR Spotter · GG’s Adventure</title>
+  <link rel="stylesheet" href="ar.css?v=5" />
+</head>
+<body>
+  <main class="ar-app" aria-label="Live augmented-reality aircraft spotter">
+    <video id="camera" class="camera" autoplay muted playsinline aria-label="Live rear camera"></video>
+    <div class="camera-shade" aria-hidden="true"></div>
+
+    <header class="top-bar">
+      <a class="back-button" href="index.html" aria-label="Back to GG’s Adventure">‹</a>
+      <div class="brand">
+        <small>GG’S ADVENTURE</small>
+        <strong>Live AR Spotter</strong>
+      </div>
+      <button id="helpButton" class="round-button" type="button" aria-label="Open help">?</button>
+    </header>
+
+    <nav class="ar-mode-tabs" aria-label="Live aviation mode"><button type="button" onclick="location.href='tracker.html'">Live Flight Tracker</button><button class="active" type="button">Live AR Spotter</button></nav>
+
+    <section class="status-strip" aria-label="Live status">
+      <span id="gpsStatus" class="status-pill waiting">GPS…</span>
+      <span id="compassStatus" class="status-pill waiting">Compass…</span>
+      <span id="dataStatus" class="status-pill waiting">Aircraft…</span>
+    </section>
+
+    <div id="compassTape" class="compass-tape" aria-hidden="true">
+      <span id="headingText">---°</span>
+    </div>
+
+    <div class="reticle" aria-hidden="true">
+      <i></i><i></i><i></i><i></i>
+      <span></span>
+    </div>
+
+    <section id="markers" class="markers" aria-live="polite"></section>
+
+    <aside id="nearestCard" class="nearest-card hidden" aria-live="polite">
+      <small>NEAREST LIVE AIRCRAFT</small>
+      <strong id="nearestName">Searching…</strong>
+      <span id="nearestMeta"></span>
+    </aside>
+
+    <section id="startPanel" class="start-panel">
+      <div class="start-card">
+        <div class="radar-icon" aria-hidden="true"><span>✈</span></div>
+        <small>PLANE-SPOTTING MODE</small>
+        <h1>See which aircraft are in front of you</h1>
+        <p>
+          GG’s live spotter combines your rear camera, GPS, compass and nearby ADS-B positions.
+          Point the phone toward the sky and tap an aircraft label to tick it off.
+        </p>
+        <button id="startButton" class="primary-button" type="button">Start Live AR</button>
+        <p id="startMessage" class="start-message">
+          Your iPhone will ask for Camera, Location and Motion &amp; Orientation access.
+        </p>
+        <p class="privacy-note">Camera video stays on your phone. Your approximate GPS position is used only to request nearby aircraft.</p>
+      </div>
+    </section>
+
+    <nav class="bottom-controls" aria-label="AR controls">
+      <button id="calibrateButton" type="button"><b>⊕</b><span>Calibrate</span></button>
+      <button id="refreshButton" type="button"><b>↻</b><span>Refresh</span></button>
+      <button id="radiusButton" type="button"><b id="radiusValue">50</b><span>KM radius</span></button>
+      <button id="logButton" type="button"><b>✓</b><span>Spotted</span></button>
+    </nav>
+
+    <section id="aircraftSheet" class="sheet hidden" aria-label="Selected aircraft">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <button id="closeAircraftSheet" class="sheet-close" type="button" aria-label="Close aircraft details">×</button>
+      <small>LIVE AIRCRAFT</small>
+      <h2 id="detailName">Aircraft</h2>
+      <div class="detail-photo-wrap"><img id="detailPhoto" src="images/aircraft-placeholder.svg" alt="Selected aircraft"><small id="detailPhotoCredit">Photo unavailable</small></div>
+      <p id="detailDescription" class="sheet-description"></p>
+      <dl class="detail-grid">
+        <div><dt>Registration</dt><dd id="detailRegistration">—</dd></div>
+        <div><dt>Type</dt><dd id="detailType">—</dd></div>
+        <div><dt>Distance</dt><dd id="detailDistance">—</dd></div>
+        <div><dt>Estimated time</dt><dd id="detailEta">—</dd></div>
+        <div><dt>Bearing</dt><dd id="detailBearing">—</dd></div>
+        <div><dt>Altitude</dt><dd id="detailAltitude">—</dd></div>
+        <div><dt>Speed</dt><dd id="detailSpeed">—</dd></div>
+      </dl>
+      <button id="markSpottedButton" class="primary-button" type="button">✓ Mark this aircraft spotted</button>
+    </section>
+
+    <section id="logSheet" class="sheet log-sheet hidden" aria-label="Aircraft spotted today">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <button id="closeLogSheet" class="sheet-close" type="button" aria-label="Close spotted list">×</button>
+      <small>GG’S SPOTTING DAY</small>
+      <h2>Aircraft ticked off</h2>
+      <div class="sheet-actions">
+        <button id="exportButton" type="button">Export JSON</button>
+        <button id="clearTodayButton" type="button">Clear today</button>
+      </div>
+      <div id="spotLog" class="spot-log"></div>
+    </section>
+
+    <section id="helpSheet" class="sheet help-sheet hidden" aria-label="AR spotter help">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <button id="closeHelpSheet" class="sheet-close" type="button" aria-label="Close help">×</button>
+      <small>QUICK HELP</small>
+      <h2>Getting the best alignment</h2>
+      <p>Hold the iPhone upright in portrait mode and point it toward the horizon. Tap <b>Calibrate</b>, then slowly pan left or right.</p>
+      <p>Compass readings can drift near cars, fences, speakers and magnetic phone mounts. Move a few metres away and calibrate again when labels look offset.</p>
+      <p>Aircraft positions may be delayed, missing or inaccurate. This is a fun spotting aid only—not a navigation or safety system.</p>
+    </section>
+
+    <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+  </main>
+
+  <script src="ar.js?v=5"></script>
+</body>
+</html>

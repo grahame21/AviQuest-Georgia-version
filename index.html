@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#07131f" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="GG’s Adventure" />
+  <link rel="manifest" href="manifest.webmanifest?v=5" />
+  <link rel="stylesheet" href="styles.css?v=6" />
+  <title>GG’s Adventure</title>
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <small>GEORGIA PRO EDITION</small>
+      <h1>AviQuest</h1>
+    </div>
+    <button id="settingsBtn" class="icon-button" type="button" aria-label="Open settings">⚙️</button>
+  </header>
+
+  <main>
+    <section id="home" class="view active">
+      <article class="welcome-card">
+        <div>
+          <small>WELCOME BACK</small>
+          <h2 id="hello">Georgia</h2>
+          <p>Play, learn, collect aircraft and record every aircraft you spot.</p>
+        </div>
+        <span aria-hidden="true">✈</span>
+      </article>
+
+      <section class="a7-feature" aria-labelledby="a7Title">
+        <div class="a7-photo-wrap">
+          <img
+            id="a7HeroPhoto"
+            src="https://cdn.jetphotos.com/full/6/1254402_1781511283.jpg"
+            alt="Qatar Airways Boeing 777-300ER A7-BAF in oneworld livery"
+          />
+          <div id="a7PhotoFallback" class="a7-photo-fallback hidden" aria-hidden="true">
+            <span>✈️</span><b>A7-BAF</b>
+          </div>
+        </div>
+        <div class="a7-copy">
+          <small>GEORGIA’S FEATURED FAVOURITE</small>
+          <h2 id="a7Title">A7-BAF</h2>
+          <p>Qatar Airways Boeing 777-300ER • oneworld livery</p>
+          <div class="photo-actions">
+            <button id="chooseHeroPhoto" type="button">Use your own photo</button>
+            <button id="restoreHeroPhoto" type="button">Restore preview</button>
+            <input id="heroPhotoInput" class="hidden" type="file" accept="image/*" />
+          </div>
+          <a class="photo-credit" href="https://www.jetphotos.com/photo/12133265" target="_blank" rel="noreferrer">Online preview: Jhang yao yun / JetPhotos</a>
+        </div>
+      </section>
+
+      <div class="stats home-stats">
+        <div>Level<strong id="level">1</strong></div>
+        <div>XP<strong id="xp">0</strong></div>
+        <div>Daily streak<strong id="dailyStreak">0</strong></div>
+        <div>Spotted<strong id="spotted">0</strong></div>
+      </div>
+
+      <div class="section-heading">
+        <h3>Play</h3>
+        <span>Harder, more useful aviation questions</span>
+      </div>
+      <div class="grid modes">
+        <button data-mode="daily" class="daily-mode"><span>☀️</span><b>Daily Challenge</b><small>A new shared set every day</small></button>
+        <button data-mode="journey" class="journey-mode"><span>🧭</span><b>Aviation Journey</b><small>Keep progressing through levels</small></button>
+        <button data-category="aircraft"><span>✈️</span><b>Aircraft Recognition</b><small>Models, makers and type codes</small></button>
+        <button data-category="airlines"><span>🏢</span><b>Airlines &amp; Logos</b><small>Clues, hubs, alliances and identities</small></button>
+        <button data-category="airports"><span>🛫</span><b>Airports &amp; Codes</b><small>IATA, ICAO and airport clues</small></button>
+        <button data-category="knowledge"><span>🎓</span><b>Aviation Knowledge</b><small>Weather, operations and terminology</small></button>
+        <button data-category="liveries"><span>🎨</span><b>Liveries &amp; Alliances</b><small>Special schemes and alliance markings</small></button>
+        <button data-category="codes"><span>🔤</span><b>Codes &amp; Callsigns</b><small>Airline, airport and aircraft codes</small></button>
+      </div>
+
+      <div class="section-heading"><h3>Explore</h3><span>Built for today’s spotting trip</span></div>
+      <div class="grid tools">
+        <button type="button" onclick="window.location.href='tracker.html'"><span>🗺️</span><b>Live Flight Tracker</b><small>Map, search and follow nearby aircraft</small></button>
+        <button type="button" onclick="window.location.href='ar.html'"><span>📡</span><b>Live AR Spotter</b><small>Point the camera toward nearby aircraft</small></button>
+        <button data-view="spotter"><span>📸</span><b>Spotter Log</b><small>Record registrations and photos</small></button>
+        <button data-view="hangar"><span>⭐</span><b>Personal Hangar</b><small>Save favourites and collections</small></button>
+        <button data-view="achievements"><span>🏆</span><b>Achievements</b><small>Track milestones and progress</small></button>
+        <button data-view="ideas"><span>💡</span><b>Ideas List</b><small>Capture improvements while testing</small></button>
+      </div>
+    </section>
+
+    <section id="quiz" class="view">
+      <div class="top quiz-top">
+        <button data-view="home" type="button">‹ Home</button>
+        <div><small id="modeLabel"></small><b id="levelLabel"></b></div>
+        <button id="pauseBtn" class="icon-button" type="button" aria-label="Pause quiz">⏸</button>
+      </div>
+
+      <div class="stats quiz-stats">
+        <div>Question<strong id="counter"></strong></div>
+        <div>Score<strong id="score">0</strong></div>
+        <div>Streak<strong id="streak">0</strong></div>
+        <div>Lives<strong id="lives">❤️❤️❤️</strong></div>
+      </div>
+      <div class="progress"><i id="bar"></i></div>
+
+      <article class="card question-card">
+        <div class="badges"><span id="difficulty"></span><span id="category"></span></div>
+        <h2 id="question"></h2>
+        <div id="media" class="media hidden"></div>
+        <div id="answers" class="answers"></div>
+
+        <div class="question-actions">
+          <button id="hintBtn" class="hint-button" type="button">💡 Hint</button>
+          <button id="next" class="primary hidden" type="button">Next question</button>
+        </div>
+        <div id="hintBox" class="hint-box hidden" aria-live="polite"></div>
+        <div id="feedback" class="feedback hidden" aria-live="polite"></div>
+      </article>
+    </section>
+
+    <section id="result" class="view">
+      <article class="card result">
+        <div id="resultIcon">🏆</div>
+        <small>CHALLENGE COMPLETE</small>
+        <h2 id="resultTitle"></h2>
+        <p id="resultText"></p>
+        <div class="stats result-stats">
+          <div>Correct<strong id="resultCorrect"></strong></div>
+          <div>XP earned<strong id="resultXp"></strong></div>
+          <div>Best streak<strong id="resultBest"></strong></div>
+        </div>
+        <button id="again" class="primary" type="button">Continue</button>
+        <button data-view="home" type="button">Back home</button>
+      </article>
+    </section>
+
+    <section id="spotter" class="view">
+      <div class="top"><button data-view="home" type="button">‹ Home</button><h2>Georgia’s Spotted Aircraft</h2></div>
+
+      <div class="tabs spot-tabs" role="tablist" aria-label="Spotted aircraft categories">
+        <button id="showArSpots" class="active" type="button" role="tab">📡 AR Spotted</button>
+        <button id="showCameraSpots" type="button" role="tab">📷 Camera Spotted</button>
+      </div>
+
+      <section id="arSpotsPanel" class="spot-category-panel">
+        <div class="spot-category-intro">
+          <div><small>LIVE AR LOG</small><h3>Aircraft marked while spotting</h3>
+          <p>Date, time, callsign, registration, distance and live aircraft information are saved automatically.</p></div>
+          <button class="primary" type="button" onclick="window.location.href='ar.html'">Open AR</button>
+        </div>
+        <div id="arSpotList" class="list"></div>
+      </section>
+
+      <section id="cameraSpotsPanel" class="spot-category-panel hidden">
+        <div class="spot-category-intro">
+          <div><small>CAMERA LOG</small><h3>Add a sighting and photo</h3>
+          <p>The date and time are filled automatically, but can be changed before saving.</p></div>
+        </div>
+        <form id="spotForm" class="card form">
+          <label>Date and time<input id="spotDate" type="datetime-local" required /></label>
+          <label>Aircraft photo<input id="photo" type="file" accept="image/*" capture="environment" /></label>
+          <label>Registration<input id="reg" placeholder="A7-BAF" /></label>
+          <label>Airline<input id="airline" placeholder="Qatar Airways" /></label>
+          <label>Aircraft model<input id="model" placeholder="Boeing 777-300ER" /></label>
+          <label>Location<input id="location" placeholder="Airport or viewing area" /></label>
+          <label>Livery<input id="livery" placeholder="oneworld, retro, standard…" /></label>
+          <label>Notes<textarea id="notes" rows="4" placeholder="Runway, direction, weather or anything memorable"></textarea></label>
+          <button class="primary" type="submit">Save camera sighting</button>
+        </form>
+        <div class="actions">
+          <button id="locate" type="button">Use current location</button>
+          <button id="exportSpots" type="button">Export camera log</button>
+        </div>
+        <div id="spotList" class="list"></div>
+      </section>
+    </section>
+
+    <section id="hangar"  class="view">
+      <div class="top"><button data-view="home" type="button">‹ Home</button><h2>Personal Hangar</h2></div>
+      <div class="mini-feature"><div><small>FEATURED FAVOURITE</small><h2>A7-BAF</h2><p>Qatar Airways Boeing 777-300ER</p></div><b>✈️</b></div>
+      <div class="tabs"><button data-tab="aircraft" class="active" type="button">Aircraft</button><button data-tab="airlines" type="button">Airlines</button><button data-tab="airports" type="button">Airports</button></div>
+      <div id="hangarGrid" class="grid hangar"></div>
+    </section>
+
+    <section id="achievements" class="view">
+      <div class="top"><button data-view="home" type="button">‹ Home</button><h2>Achievements</h2></div>
+      <div id="achievementGrid" class="grid hangar"></div>
+    </section>
+
+    <section id="ideas" class="view">
+      <div class="top"><button data-view="home" type="button">‹ Home</button><h2>Ideas &amp; Improvements</h2></div>
+      <form id="ideaForm" class="card form">
+        <label>Idea<textarea id="ideaText" required rows="4" placeholder="What should we add or change?"></textarea></label>
+        <label>Area<select id="ideaCategory"><option>Quiz</option><option>Plane spotting</option><option>Aircraft photos</option><option>Design</option><option>Accessibility</option><option>Data</option><option>Other</option></select></label>
+        <button class="primary" type="submit">Add idea</button>
+      </form>
+      <div class="actions"><button id="exportIdeas" type="button">Export ideas</button><button id="clearIdeas" type="button">Remove completed</button></div>
+      <div id="ideaList" class="list"></div>
+    </section>
+
+    <section id="settings" class="view">
+      <div class="top"><button data-view="home" type="button">‹ Home</button><h2>Settings</h2></div>
+      <div class="card form">
+        <label>Player name<input id="playerName" placeholder="Player name" /></label>
+        <label class="switch-row"><span>Sound effects</span><input id="sound" type="checkbox" /></label>
+        <label class="switch-row"><span>Haptic vibration</span><input id="haptics" type="checkbox" /></label>
+        <label class="switch-row"><span>Large text</span><input id="largeText" type="checkbox" /></label>
+        <label class="switch-row"><span>Reduced motion</span><input id="reducedMotion" type="checkbox" /></label>
+        <label>Questions per challenge<select id="questionCount"><option value="10">10</option><option value="15">15</option><option value="25">25</option></select></label>
+        <button id="saveSettings" class="primary" type="button">Save settings</button>
+        <button id="resetProgress" class="warning" type="button">Reset levels, XP and quiz scores</button>
+        <p class="reset-note">This keeps Georgia’s spotting log, saved photos, ideas, favourites and settings.</p>
+        <button id="resetAll" class="danger" type="button">Reset the entire app</button>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <button data-view="home" type="button">⌂<span>Home</span></button>
+    <button data-mode="journey" type="button">▶<span>Play</span></button>
+    <button data-view="spotter" type="button">📸<span>Spot</span></button>
+    <button data-view="hangar" type="button">⭐<span>Hangar</span></button>
+    <button data-view="ideas" type="button">💡<span>Ideas</span></button>
+  </nav>
+
+  <div id="pause" class="modal hidden">
+    <div class="card result"><h2>Quiz paused</h2><button id="resume" class="primary" type="button">Resume</button><button id="quit" type="button">Quit to home</button></div>
+  </div>
+
+  <script src="data.js?v=5"></script>
+  <script src="app.js?v=6"></script>
+</body>
+</html>
