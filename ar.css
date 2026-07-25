@@ -700,3 +700,43 @@ button {
 .route-line span{color:#a5bac9;font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .route-line i{text-align:center;color:#39baf6;font-size:1.4rem;font-style:normal}
 .route-card p{margin:9px 0 0;color:#8ea8ba;font-size:.78rem}
+
+/* Emergency AR recovery v7 */
+.camera{
+  position:absolute!important;
+  z-index:2!important;
+  inset:0!important;
+  width:100%!important;
+  height:100%!important;
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  object-fit:cover!important;
+  background:#18242c!important;
+}
+.camera-shade{
+  z-index:3!important;
+  background:
+    linear-gradient(180deg,rgba(0,8,13,.20),transparent 14%,transparent 80%,rgba(0,8,13,.26))!important;
+}
+.top-bar,.ar-mode-tabs,.status-strip,.compass-tape,.reticle,.markers,
+.nearest-card,.bottom-controls,.sheet,.start-panel,.toast{
+  z-index:20!important;
+}
+.marker.compass-fallback{
+  border-color:rgba(255,211,78,.75);
+  box-shadow:0 0 0 2px rgba(255,211,78,.12),0 12px 30px rgba(0,0,0,.38);
+}
+.marker.compass-fallback::after{
+  content:"Nearest";
+  position:absolute;
+  top:-17px;
+  right:6px;
+  padding:2px 6px;
+  border-radius:999px;
+  background:rgba(255,211,78,.18);
+  color:#ffd34e;
+  font-size:.56rem;
+  font-weight:900;
+  letter-spacing:.06em;
+}

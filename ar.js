@@ -422,6 +422,7 @@ function cameraTrackIsLive() {
 async function attachCameraStream(stream) {
   state.stream = stream;
   const track = stream.getVideoTracks()[0];
+
   if (track?.getSettings) {
     const settings = track.getSettings();
     if (settings.deviceId) localStorage.setItem(CAMERA_DEVICE_KEY, settings.deviceId);
@@ -434,9 +435,18 @@ async function attachCameraStream(stream) {
   elements.camera.setAttribute("muted", "");
   elements.camera.setAttribute("playsinline", "");
   elements.camera.setAttribute("webkit-playsinline", "true");
+
+  elements.camera.pause();
+  elements.camera.srcObject = null;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
   elements.camera.srcObject = stream;
-  await waitForVideoFrame(elements.camera);
+
+  await elements.camera.play();
+  await waitForVideoFrame(elements.camera, 10000);
+
   elements.camera.classList.add("camera-live");
+  elements.camera.style.visibility = "visible";
+  elements.camera.style.opacity = "1";
   return stream;
 }
 
@@ -674,12 +684,17 @@ async function startLiveAr() {
     : { granted: false, reason: orientationResult.reason?.message || "Compass permission failed." };
 
   if (!orientation.granted) {
-    setStatus(elements.compassStatus, "Compass blocked", "error");
-    showToast(`${orientation.reason} The nearest-aircraft card still works, but camera labels cannot align.` , 5200);
+    setStatus(elements.compassStatus, "Compass unavailable", "error");
+    showToast("Compass access is unavailable. AviQuest is showing the nearest aircraft in fallback mode. Tap Calibrate to try the compass again.", 6200);
   }
 
   state.active = true;
   localStorage.setItem(PERMISSION_SETUP_KEY, "yes");
+  window.setTimeout(() => {
+    if (state.active && (!elements.camera.videoWidth || !cameraTrackIsLive())) {
+      restartCamera();
+    }
+  }, 1800);
   elements.startPanel.classList.add("hidden");
   await requestWakeLock();
   await fetchNearbyAircraft();
@@ -790,14 +805,41 @@ function renderLoop(timestamp) {
 }
 
 function renderMarkers() {
+  const spots = spottedIds();
+
   if (!Number.isFinite(state.heading)) {
-    for (const node of state.markerNodes.values()) node.remove();
-    state.markerNodes.clear();
+    const fallback = state.aircraft.slice(0, 3);
+    const visibleIds = new Set();
+
+    fallback.forEach((aircraft, index) => {
+      visibleIds.add(aircraft.id);
+      let marker = state.markerNodes.get(aircraft.id);
+      if (!marker) {
+        marker = createMarkerNode(aircraft);
+        state.markerNodes.set(aircraft.id, marker);
+        elements.markers.append(marker);
+      }
+
+      marker.style.left = "50%";
+      marker.style.top = `${48 + index * 11}%`;
+      marker.style.transform = "translate(-50%, -50%)";
+      marker.classList.toggle("spotted", spots.has(aircraft.id));
+      marker.classList.toggle("centred", index === 0);
+      marker.classList.add("compass-fallback");
+      marker.hidden = false;
+      updateMarkerNode(marker, aircraft);
+    });
+
+    for (const [id, marker] of state.markerNodes) {
+      if (!visibleIds.has(id)) {
+        marker.remove();
+        state.markerNodes.delete(id);
+      }
+    }
     return;
   }
 
   const cameraPitch = state.rawPitch - state.pitchOffset;
-  const spots = spottedIds();
   const candidates = state.aircraft.map((aircraft) => {
     const horizontalDifference = angleDelta(aircraft.bearing, state.heading);
     const verticalDifference = aircraft.elevation - cameraPitch;
@@ -819,10 +861,7 @@ function renderMarkers() {
   for (const item of candidates) {
     const { aircraft, horizontalDifference, verticalDifference } = item;
     let x = Math.max(9, Math.min(91, 50 + (horizontalDifference / HORIZONTAL_FOV) * 100));
-
-    // Deliberately inverted from the previous build: raising the phone now moves
-    // labels upward on screen, matching the direction reported in FlightAware/FR24.
-    let y = Math.max(22, Math.min(68, 50 + (verticalDifference / VERTICAL_FOV) * 100));
+    let y = Math.max(22, Math.min(68, 50 - (verticalDifference / VERTICAL_FOV) * 100));
 
     for (let attempt = 0; attempt < 6; attempt += 1) {
       const clash = occupied.some((box) => Math.abs(box.x - x) < 23 && Math.abs(box.y - y) < 13);
@@ -831,6 +870,7 @@ function renderMarkers() {
       y = Math.max(22, Math.min(68, y + direction * (10 + attempt * 2)));
       x = Math.max(9, Math.min(91, x - direction * 7));
     }
+
     if (occupied.some((box) => Math.abs(box.x - x) < 20 && Math.abs(box.y - y) < 11)) continue;
     occupied.push({ x, y });
     visibleIds.add(aircraft.id);
@@ -844,6 +884,8 @@ function renderMarkers() {
 
     marker.style.left = `${x}%`;
     marker.style.top = `${y}%`;
+    marker.style.transform = "translate(-50%, -50%)";
+    marker.classList.remove("compass-fallback");
     marker.classList.toggle("spotted", spots.has(aircraft.id));
     marker.classList.toggle("centred", item.score < 7);
     marker.hidden = false;
