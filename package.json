@@ -1,0 +1,28 @@
+{
+  "name": "aviquest-georgia-flight-tracker",
+  "version": "1.0.0",
+  "description": "Premium flight tracking application with global aircraft visualization, flight plans, and AR features",
+  "main": "tracker.js",
+  "scripts": {
+    "build": "echo 'AviQuest Flight Tracker - Build Complete'",
+    "dev": "netlify dev",
+    "start": "netlify dev"
+  },
+  "keywords": [
+    "aviation",
+    "flight-tracking",
+    "opensky",
+    "aircraft",
+    "adsb",
+    "real-time"
+  ],
+  "author": "grahame21",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "netlify": {
+    "functions": "functions",
+    "functionsDirectory": "functions"
+  }
+}
