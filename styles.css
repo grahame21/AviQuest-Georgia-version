@@ -829,27 +829,3 @@ body.reduced-motion *::after {
     font-size: 0.61rem;
   }
 }
-
-/* Spotted aircraft categories v3 */
-.spot-tabs{margin:12px 0 14px}
-.spot-tabs button{min-height:46px}
-.spot-category-panel.hidden{display:none!important}
-.spot-category-intro{
-  display:flex;align-items:center;justify-content:space-between;gap:12px;
-  padding:14px;margin-bottom:12px;border:1px solid rgba(79,180,241,.25);
-  border-radius:18px;background:rgba(8,26,42,.78)
-}
-.spot-category-intro small{color:#30d17b;font-weight:900;letter-spacing:.09em}
-.spot-category-intro h3{margin:3px 0 4px}
-.spot-category-intro p{margin:0;color:#9ab0c1;font-size:.9rem}
-.spot-category-intro button{flex:0 0 auto}
-.ar-spot-item{position:relative;padding-right:58px}
-.spot-source-badge{
-  position:absolute;right:13px;top:13px;padding:4px 8px;border-radius:999px;
-  background:rgba(48,209,123,.17);color:#30d17b;border:1px solid rgba(48,209,123,.35);
-  font-size:.72rem;font-weight:900
-}
-@media(max-width:520px){
-  .spot-category-intro{align-items:flex-start;flex-direction:column}
-  .spot-category-intro button{width:100%}
-}

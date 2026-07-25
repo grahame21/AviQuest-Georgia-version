@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#06111d" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>AviQuest Live Aviation</title>
+  <title>AviQuest Live Flight Tracker</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="tracker.css?v=3" />
+  <link rel="stylesheet" href="tracker.css?v=2" />
 </head>
 <body>
   <header class="tracker-header">
@@ -17,51 +17,43 @@
     <button id="refreshBtn" class="round-button" type="button" aria-label="Refresh aircraft">↻</button>
   </header>
 
-  <nav class="mode-tabs" aria-label="Live aviation mode">
-    <button class="active" type="button">Flight Tracker</button>
-    <button id="topArBtn" type="button">AR Spotter</button>
+  <nav class="mode-tabs" aria-label="Tracker mode">
+    <button class="active" type="button">Live Flight Tracker</button>
+    <button id="topArBtn" type="button">Live AR Spotter</button>
   </nav>
 
   <section class="search-panel">
     <label class="search-box">
-      <span class="search-icon">⌕</span>
-      <input id="searchInput" type="search" autocomplete="off"
-        placeholder="Flight, registration, airline or airport" />
-      <button id="locateBtn" class="search-action" type="button" aria-label="My location" title="My location">◎</button>
-      <button id="favouritesBtn" class="search-action" type="button" aria-label="Favourites" title="Favourites">★<i id="favouriteCount">0</i></button>
-      <button id="savedBtn" class="search-action" type="button" aria-label="Saved" title="Saved">▣<i id="savedCount">0</i></button>
-      <button id="clearSearch" class="search-action clear-action" type="button" aria-label="Clear search">×</button>
+      <span>⌕</span>
+      <input id="searchInput" type="search" autocomplete="off" placeholder="Flight, aircraft, airline or airport" />
+      <button id="clearSearch" type="button" aria-label="Clear search">×</button>
     </label>
+    <div class="quick-actions" role="group" aria-label="Quick filters">
+      <button id="locateBtn" type="button">◎ My location</button>
+      <button id="favouritesBtn" type="button">★ Favourites <span id="favouriteCount">0</span></button>
+      <button id="savedBtn" type="button">▣ Saved <span id="savedCount">0</span></button>
+    </div>
   </section>
 
   <main>
     <div id="map" aria-label="Global live aircraft map"></div>
-
-    <div class="status-pill">
+    <div class="status-strip">
       <span id="liveDot" class="live-dot"></span>
-      <b id="statusText">Loading aircraft…</b>
-      <span id="aircraftCount">0</span>
+      <b id="statusText">Loading the visible map area…</b>
+      <span id="aircraftCount">0 aircraft</span>
     </div>
-
-    <button id="listToggle" class="list-toggle" type="button">
-      Nearby <span id="listCount">0</span>
-    </button>
-
-    <aside id="aircraftList" class="aircraft-list" aria-label="Nearby aircraft"></aside>
+    <button id="listToggle" class="list-toggle" type="button">Aircraft list <span id="listCount">0</span></button>
+    <aside id="aircraftList" class="aircraft-list" aria-label="Aircraft list"></aside>
 
     <section id="detailsPanel" class="details-panel hidden" aria-live="polite">
       <button id="closeDetails" class="close-button" type="button" aria-label="Close details">×</button>
       <div class="details-top">
         <img id="aircraftPhoto" src="images/aircraft-placeholder.svg" alt="Aircraft preview" />
-        <div>
-          <small id="detailStatus">LIVE</small>
-          <h2 id="detailCallsign">Aircraft</h2>
-          <p id="detailReg">Registration unavailable</p>
-        </div>
+        <div><small id="detailStatus">LIVE</small><h2 id="detailCallsign">Aircraft</h2><p id="detailReg">Registration unavailable</p></div>
       </div>
       <div class="detail-actions favourite-actions">
         <button id="saveFavourite" type="button">☆ Favourite</button>
-        <button id="saveItem" type="button">▣ Save</button>
+        <button id="saveItem" type="button">▣ Save aircraft</button>
       </div>
       <div class="detail-grid">
         <div><small>Aircraft</small><b id="detailType">Unknown</b></div>
@@ -71,20 +63,19 @@
         <div><small>Heading</small><b id="detailHeading">—</b></div>
         <div><small>Updated</small><b id="detailSeen">—</b></div>
       </div>
-      <div class="detail-actions">
-        <button id="centreAircraft" type="button">Centre</button>
-        <button id="openAr" class="primary" type="button">Open in AR</button>
-      </div>
+      <div class="detail-actions"><button id="centreAircraft" type="button">Centre on map</button><button id="openAr" class="primary" type="button">Open in AR</button></div>
     </section>
   </main>
 
-  <button id="navA7" class="a7-fab" type="button" aria-label="Find A7-BAF">★ A7-BAF</button>
-
-  <span id="navNearby" hidden></span>
-  <span id="navAr" hidden></span>
-  <span id="navHome" hidden></span>
+  <nav class="tracker-nav">
+    <button class="active" type="button">🗺️<span>Map</span></button>
+    <button id="navNearby" type="button">📍<span>Nearby</span></button>
+    <button id="navA7" type="button">★<span>A7-BAF</span></button>
+    <button id="navAr" type="button">📡<span>AR</span></button>
+    <button id="navHome" type="button">⌂<span>Home</span></button>
+  </nav>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="tracker.js?v=3"></script>
+  <script src="tracker.js?v=2"></script>
 </body>
 </html>

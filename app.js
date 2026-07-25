@@ -25,7 +25,6 @@
   let profile = load(K.profile, freshProfile());
   let progress = {...freshProgress(), ...load(K.progress, freshProgress())};
   let spots = load(K.spots, []);
-  let arSpots = load('ggAdventureArSpots', []);
   let ideas = load(K.ideas, []);
   let favs = load(K.favourites, freshFavourites());
   let heroPhoto = localStorage.getItem(K.heroPhoto) || '';
@@ -62,7 +61,7 @@
   function show(id) {
     views.forEach(view => view.classList.toggle('active', view.id === id));
     if (id === 'home') refreshHome();
-    if (id === 'spotter') { renderArSpots(); renderSpots(); }
+    if (id === 'spotter') renderSpots();
     if (id === 'hangar') renderHangar();
     if (id === 'achievements') renderAchievements();
     if (id === 'ideas') renderIdeas();
@@ -366,55 +365,6 @@
     image.onerror = () => { image.classList.add('hidden'); fallback.classList.remove('hidden'); };
   }
 
-  function getArSpots() {
-    const keys = ['ggAdventureArSpots', 'aq_ar_spots', 'aviquest_ar_spots'];
-    const merged = [];
-    const used = new Set();
-    keys.forEach(key => {
-      load(key, []).forEach(item => {
-        const id = item.id || `${item.timestamp}-${item.aircraftId || item.registration || item.callsign}`;
-        if (!used.has(id)) { used.add(id); merged.push(item); }
-      });
-    });
-    arSpots = merged;
-    return merged;
-  }
-
-  function renderArSpots() {
-    const element = $('arSpotList');
-    if (!element) return;
-    const entries = getArSpots().slice().sort((a,b) =>
-      new Date(b.timestamp || b.date || b.created || 0) - new Date(a.timestamp || a.date || a.created || 0)
-    );
-    if (!entries.length) {
-      element.innerHTML = '<div class="item"><h3>No AR-spotted aircraft yet</h3><small>Open Live AR Spotter, tap an aircraft and choose “Mark spotted”.</small></div>';
-      return;
-    }
-    element.innerHTML = entries.map(spot => {
-      const title = spot.callsign || spot.registration || spot.reg || (spot.hex ? String(spot.hex).toUpperCase() : '') || 'Aircraft';
-      const reg = spot.registration || spot.reg || '';
-      const type = spot.type || spot.model || spot.description || '';
-      const km = Number.isFinite(Number(spot.distanceKm)) ? `${Number(spot.distanceKm).toFixed(1)} km` :
-        Number.isFinite(Number(spot.distanceNm)) ? `${(Number(spot.distanceNm) * 1.852).toFixed(1)} km` : '';
-      const when = new Date(spot.timestamp || spot.date || spot.created || Date.now()).toLocaleString('en-AU');
-      return `<article class="item ar-spot-item">
-        <span class="spot-source-badge">AR</span>
-        <h3>${esc(title)}</h3>
-        <small>${esc([reg,type,km].filter(Boolean).join(' • ') || 'Live AR sighting')}</small>
-        <small>${esc(when)}</small>
-      </article>`;
-    }).join('');
-  }
-
-  function setSpotCategory(category) {
-    const ar = category === 'ar';
-    $('showArSpots').classList.toggle('active', ar);
-    $('showCameraSpots').classList.toggle('active', !ar);
-    $('arSpotsPanel').classList.toggle('hidden', !ar);
-    $('cameraSpotsPanel').classList.toggle('hidden', ar);
-    if (ar) renderArSpots(); else renderSpots();
-  }
-
   function renderSpots() {
     const element = $('spotList');
     if (!spots.length) { element.innerHTML = '<div class="item">No aircraft recorded yet.</div>'; return; }
@@ -562,9 +512,6 @@
   $('exportSpots').addEventListener('click', () => download(`Georgia-Spotter-Log-${today()}.json`,spots));
 
   document.querySelectorAll('[data-tab]').forEach(button => button.addEventListener('click', () => { tab = button.dataset.tab; renderHangar(); }));
-  $('showArSpots').addEventListener('click', () => setSpotCategory('ar'));
-  $('showCameraSpots').addEventListener('click', () => setSpotCategory('camera'));
-
 
   $('ideaForm').addEventListener('submit', event => {
     event.preventDefault();

@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="GG’s Adventure" />
   <title>Live AR Spotter · GG’s Adventure</title>
-  <link rel="stylesheet" href="ar.css?v=7" />
+  <link rel="stylesheet" href="ar.css?v=5" />
 </head>
 <body>
   <main class="ar-app" aria-label="Live augmented-reality aircraft spotter">
@@ -58,11 +58,10 @@
           GG’s live spotter combines your rear camera, GPS, compass and nearby ADS-B positions.
           Point the phone toward the sky and tap an aircraft label to tick it off.
         </p>
-        <button id="startButton" class="primary-button" type="button">Allow once, then remember</button>
+        <button id="startButton" class="primary-button" type="button">Start Live AR</button>
         <p id="startMessage" class="start-message">
-          The first start may ask for Camera, Location and Motion access. Choose the ongoing website option rather than “Allow Once” where iPhone offers that choice.
+          Your iPhone will ask for Camera, Location and Motion &amp; Orientation access.
         </p>
-        <p id="permissionSummary" class="permission-summary">Checking saved website permissions…</p>
         <p class="privacy-note">Camera video stays on your phone. Your approximate GPS position is used only to request nearby aircraft.</p>
       </div>
     </section>
@@ -70,7 +69,7 @@
     <nav class="bottom-controls" aria-label="AR controls">
       <button id="calibrateButton" type="button"><b>⊕</b><span>Calibrate</span></button>
       <button id="refreshButton" type="button"><b>↻</b><span>Refresh</span></button>
-      <button id="cameraButton" type="button"><b>▣</b><span>Camera</span></button>
+      <button id="radiusButton" type="button"><b id="radiusValue">50</b><span>KM radius</span></button>
       <button id="logButton" type="button"><b>✓</b><span>Spotted</span></button>
     </nav>
 
@@ -81,20 +80,7 @@
       <h2 id="detailName">Aircraft</h2>
       <div class="detail-photo-wrap"><img id="detailPhoto" src="images/aircraft-placeholder.svg" alt="Selected aircraft"><small id="detailPhotoCredit">Photo unavailable</small></div>
       <p id="detailDescription" class="sheet-description"></p>
-
-      <section class="route-card" aria-label="Flight route">
-        <small>LIVE FLIGHT ROUTE</small>
-        <div class="route-line">
-          <div><b id="detailOriginCode">—</b><span id="detailOriginName">Origin unavailable</span></div>
-          <i aria-hidden="true">→</i>
-          <div><b id="detailDestinationCode">—</b><span id="detailDestinationName">Destination unavailable</span></div>
-        </div>
-        <p id="detailRouteStatus">Looking up the published flight route…</p>
-      </section>
-
       <dl class="detail-grid">
-        <div><dt>Flight</dt><dd id="detailFlight">—</dd></div>
-        <div><dt>Airline</dt><dd id="detailAirline">—</dd></div>
         <div><dt>Registration</dt><dd id="detailRegistration">—</dd></div>
         <div><dt>Type</dt><dd id="detailType">—</dd></div>
         <div><dt>Distance</dt><dd id="detailDistance">—</dd></div>
@@ -131,6 +117,6 @@
     <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
   </main>
 
-  <script src="ar.js?v=7"></script>
+  <script src="ar.js?v=5"></script>
 </body>
 </html>
