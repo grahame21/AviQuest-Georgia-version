@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="GG’s Adventure" />
   <link rel="manifest" href="manifest.webmanifest?v=5" />
-  <link rel="stylesheet" href="styles.css?v=5" />
+  <link rel="stylesheet" href="styles.css?v=6" />
   <title>GG’s Adventure</title>
 </head>
 <body>
@@ -135,26 +135,47 @@
     </section>
 
     <section id="spotter" class="view">
-      <div class="top"><button data-view="home" type="button">‹ Home</button><h2>Georgia’s Spotter Log</h2></div>
-      <div class="actions">
-        <button class="primary" type="button" onclick="window.location.href='ar.html'">📡 Open Live AR Spotter</button>
+      <div class="top"><button data-view="home" type="button">‹ Home</button><h2>Georgia’s Spotted Aircraft</h2></div>
+
+      <div class="tabs spot-tabs" role="tablist" aria-label="Spotted aircraft categories">
+        <button id="showArSpots" class="active" type="button" role="tab">📡 AR Spotted</button>
+        <button id="showCameraSpots" type="button" role="tab">📷 Camera Spotted</button>
       </div>
-      <form id="spotForm" class="card form">
-        <label>Date and time<input id="spotDate" type="datetime-local" required /></label>
-        <label>Registration<input id="reg" placeholder="A7-BAF" /></label>
-        <label>Airline<input id="airline" placeholder="Qatar Airways" /></label>
-        <label>Aircraft model<input id="model" placeholder="Boeing 777-300ER" /></label>
-        <label>Location<input id="location" placeholder="Airport or viewing area" /></label>
-        <label>Livery<input id="livery" placeholder="oneworld, retro, standard…" /></label>
-        <label>Notes<textarea id="notes" rows="4" placeholder="Runway, direction, weather or anything memorable"></textarea></label>
-        <label>Optional photo<input id="photo" type="file" accept="image/*" /></label>
-        <button class="primary" type="submit">Save sighting</button>
-      </form>
-      <div class="actions"><button id="locate" type="button">Use current location</button><button id="exportSpots" type="button">Export log</button></div>
-      <div id="spotList" class="list"></div>
+
+      <section id="arSpotsPanel" class="spot-category-panel">
+        <div class="spot-category-intro">
+          <div><small>LIVE AR LOG</small><h3>Aircraft marked while spotting</h3>
+          <p>Date, time, callsign, registration, distance and live aircraft information are saved automatically.</p></div>
+          <button class="primary" type="button" onclick="window.location.href='ar.html'">Open AR</button>
+        </div>
+        <div id="arSpotList" class="list"></div>
+      </section>
+
+      <section id="cameraSpotsPanel" class="spot-category-panel hidden">
+        <div class="spot-category-intro">
+          <div><small>CAMERA LOG</small><h3>Add a sighting and photo</h3>
+          <p>The date and time are filled automatically, but can be changed before saving.</p></div>
+        </div>
+        <form id="spotForm" class="card form">
+          <label>Date and time<input id="spotDate" type="datetime-local" required /></label>
+          <label>Aircraft photo<input id="photo" type="file" accept="image/*" capture="environment" /></label>
+          <label>Registration<input id="reg" placeholder="A7-BAF" /></label>
+          <label>Airline<input id="airline" placeholder="Qatar Airways" /></label>
+          <label>Aircraft model<input id="model" placeholder="Boeing 777-300ER" /></label>
+          <label>Location<input id="location" placeholder="Airport or viewing area" /></label>
+          <label>Livery<input id="livery" placeholder="oneworld, retro, standard…" /></label>
+          <label>Notes<textarea id="notes" rows="4" placeholder="Runway, direction, weather or anything memorable"></textarea></label>
+          <button class="primary" type="submit">Save camera sighting</button>
+        </form>
+        <div class="actions">
+          <button id="locate" type="button">Use current location</button>
+          <button id="exportSpots" type="button">Export camera log</button>
+        </div>
+        <div id="spotList" class="list"></div>
+      </section>
     </section>
 
-    <section id="hangar" class="view">
+    <section id="hangar"  class="view">
       <div class="top"><button data-view="home" type="button">‹ Home</button><h2>Personal Hangar</h2></div>
       <div class="mini-feature"><div><small>FEATURED FAVOURITE</small><h2>A7-BAF</h2><p>Qatar Airways Boeing 777-300ER</p></div><b>✈️</b></div>
       <div class="tabs"><button data-tab="aircraft" class="active" type="button">Aircraft</button><button data-tab="airlines" type="button">Airlines</button><button data-tab="airports" type="button">Airports</button></div>
@@ -207,6 +228,6 @@
   </div>
 
   <script src="data.js?v=5"></script>
-  <script src="app.js?v=5"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>

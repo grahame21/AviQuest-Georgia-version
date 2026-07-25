@@ -54,7 +54,7 @@ async function loadVisibleAircraft(force=false){
     state.aircraft=(data.aircraft||[]).map(a=>enrichAircraft(a,now)).sort((a,b)=>a.distanceKm-b.distanceKm);
     renderMarkers();renderList();
     const stamp=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-    setStatus(`${data.source||'Live data'} • ${stamp} • movement 4×/sec`,true);
+    setStatus(`${data.source||'Live'} • ${stamp}`,true);
     els.aircraftCount.textContent=`${state.aircraft.length} aircraft`;els.listCount.textContent=filteredAircraft().length;
     if(state.selected){const updated=state.aircraft.find(a=>aircraftKey(a)===aircraftKey(state.selected));if(updated)selectAircraft(updated,false)}
   }catch(error){setStatus(error.message||'Unable to load aircraft.',false)}finally{state.loading=false}
@@ -84,7 +84,7 @@ function renderMarkers(){
   for(const[key,marker]of state.markers)if(!active.has(key)){state.map.removeLayer(marker);state.markers.delete(key)}
 }
 
-function aircraftIcon(a,selected){const ground=Number(a.altitude)===0,rotation=Number.isFinite(Number(a.track))?Number(a.track):0;return L.divIcon({className:'aircraft-icon',iconSize:[34,34],iconAnchor:[17,17],html:`<div class="plane-marker${ground?' ground':''}${selected?' selected':''}" style="transform:rotate(${rotation}deg)">✈</div>`})}
+function aircraftIcon(a,selected){const ground=Number(a.altitude)===0,rotation=Number.isFinite(Number(a.track))?Number(a.track):0;return L.divIcon({className:'aircraft-icon',iconSize:[31,31],iconAnchor:[15,15],html:`<div class="plane-marker${ground?' ground':''}${selected?' selected':''}" style="transform:rotate(${rotation}deg)">✈</div>`})}
 
 function filteredAircraft(){
   let list=state.aircraft,q=els.searchInput.value.trim().toLowerCase();
