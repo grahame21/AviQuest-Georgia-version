@@ -32,6 +32,11 @@ function finiteNumber(value) {
   return Number.isFinite(number) ? number : null;
 }
 
+function integerNumber(value, fallback = 0) {
+  const number = Number.parseInt(value, 10);
+  return Number.isFinite(number) ? number : fallback;
+}
+
 function cleanText(value) {
   return String(value ?? "").trim();
 }
@@ -46,15 +51,19 @@ function normaliseAircraft(record) {
   const longitude = finiteNumber(record.lon ?? record.lng ?? record.longitude ?? record.lastPosition?.lon);
   if (latitude === null || longitude === null) return null;
 
-  const seenPosition = finiteNumber(record.seen_pos ?? record.seenPosition ?? record.lastPosition?.seen);
+  const seenPosition = finiteNumber(
+    record.seen_pos ?? record.seenPosition ?? record.lastPosition?.seen_pos ?? record.lastPosition?.seen
+  );
   const altitude = normaliseAltitude(record.alt_baro ?? record.altitude ?? record.alt_geom);
+  const dbFlags = integerNumber(record.dbFlags ?? record.db_flags, 0);
 
   return {
     hex: cleanText(record.hex ?? record.icao ?? record.icao24).replace(/^~/, ""),
     callsign: cleanText(record.flight ?? record.callsign ?? record.call),
     registration: cleanText(record.r ?? record.registration ?? record.reg),
-    type: cleanText(record.t ?? record.type ?? record.aircraft_type),
-    description: cleanText(record.desc ?? record.description ?? record.ownOp),
+    type: cleanText(record.t ?? record.aircraft_type),
+    description: cleanText(record.desc ?? record.description),
+    operator: cleanText(record.ownOp ?? record.operator ?? record.owner),
     lat: latitude,
     lon: longitude,
     altitude,
@@ -69,7 +78,12 @@ function normaliseAircraft(record) {
     seen: finiteNumber(record.seen),
     seenPosition,
     emergency: cleanText(record.emergency),
-    sourceType: cleanText(record.type)
+    sourceType: cleanText(record.type),
+    dbFlags,
+    isMilitary: Boolean(dbFlags & 1),
+    isInteresting: Boolean(dbFlags & 2),
+    isPia: Boolean(dbFlags & 4),
+    isLadd: Boolean(dbFlags & 8)
   };
 }
 
@@ -81,7 +95,7 @@ async function fetchJson(url) {
     const res = await fetch(url, {
       headers: {
         Accept: "application/json",
-        "User-Agent": "GGs-Adventure-Live-AR/1.0"
+        "User-Agent": "AviQuest-GGs-Adventure/2.0"
       },
       signal: controller.signal
     });
@@ -95,7 +109,7 @@ async function fetchJson(url) {
     }
 
     if (!res.ok) {
-      const reason = data?.message || data?.error || `HTTP ${res.status}`;
+      const reason = data?.message || data?.error || data?.msg || `HTTP ${res.status}`;
       throw new Error(reason);
     }
 
@@ -144,6 +158,8 @@ exports.handler = async function handler(event) {
         .filter(Boolean)
         .filter((record) => record.seenPosition === null || record.seenPosition <= 120);
 
+      const militaryTotal = aircraft.filter((record) => record.isMilitary).length;
+
       return response(200, {
         ok: true,
         source: source.name,
@@ -151,6 +167,8 @@ exports.handler = async function handler(event) {
         radiusNm: radius,
         centre: { lat: latitude, lon: longitude },
         total: aircraft.length,
+        civilTotal: aircraft.length - militaryTotal,
+        militaryTotal,
         aircraft
       });
     } catch (error) {
