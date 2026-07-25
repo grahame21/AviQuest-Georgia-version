@@ -2,7 +2,7 @@
   color-scheme:dark;
   --bg:#06111d;--panel:rgba(5,17,29,.96);--line:rgba(126,194,235,.24);
   --text:#f4fbff;--muted:#94aabc;--blue:#1597e5;--green:#30d17b;
-  --gold:#ffd34e;--danger:#ff6b6b
+  --gold:#ffd34e;--military:#ffb648;--danger:#ff6b6b
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);
@@ -47,18 +47,36 @@ button{touch-action:manipulation}
   display:grid;place-items:center
 }
 .clear-action{background:transparent;color:#9fb4c4;font-size:22px}
+.traffic-filters{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px;padding:4px;
+  border:1px solid var(--line);border-radius:13px;background:rgba(5,17,29,.92);
+  backdrop-filter:blur(13px);box-shadow:0 6px 20px rgba(0,0,0,.2)
+}
+.traffic-filter{
+  min-width:0;height:34px;border:1px solid transparent;border-radius:9px;background:#0b2235;
+  color:var(--muted);font-size:12px;font-weight:850
+}
+.traffic-filter span{margin-left:3px;color:#9cdcff}
+.traffic-filter.active{background:#123a59;color:#fff;border-color:#4dbdff}
+.traffic-filter.active span{color:#fff}
+.traffic-filter.military-filter span{color:var(--military)}
+.traffic-filter.military-filter.active{background:#463319;border-color:var(--military);color:#fff}
 main{position:absolute;inset:calc(96px + env(safe-area-inset-top)) 0 0}
 #map{height:100%;width:100%;background:#07141f}
-.leaflet-control-zoom{margin-top:62px!important;margin-left:9px!important}
+.leaflet-control-zoom{margin-top:105px!important;margin-left:9px!important}
 .leaflet-control-attribution{font-size:8px!important}
 .aircraft-icon{background:transparent!important;border:0!important}
 .plane-marker{
-  width:25px;height:25px;border-radius:50%;display:grid;place-items:center;
+  width:27px;height:27px;border-radius:50%;display:grid;place-items:center;
   background:#0b2a43;border:1.5px solid #66c7ff;box-shadow:0 2px 8px rgba(0,0,0,.5);
-  font-size:14px;transform-origin:center
+  font-size:15px;transform-origin:center;color:#fff
 }
+.plane-marker.civil{background:#0b2a43;border-color:#66c7ff}
+.plane-marker.military{background:#442f13;border-color:var(--military);color:#fff1d5;
+  box-shadow:0 2px 9px rgba(0,0,0,.58),0 0 0 3px rgba(255,182,72,.12)}
 .plane-marker.ground{border-color:var(--green);background:#123626}
-.plane-marker.selected{width:31px;height:31px;font-size:17px;border:2px solid var(--gold);
+.plane-marker.emergency{border-color:var(--danger);box-shadow:0 0 0 4px rgba(255,107,107,.24),0 3px 12px #000}
+.plane-marker.selected{width:33px;height:33px;font-size:18px;border:2px solid var(--gold);
   box-shadow:0 0 0 4px rgba(255,211,78,.2),0 4px 16px #000}
 .user-pin{width:18px;height:18px;border-radius:50%;background:var(--blue);border:4px solid #fff;
   box-shadow:0 0 0 6px rgba(21,151,229,.24)}
@@ -77,7 +95,7 @@ main{position:absolute;inset:calc(96px + env(safe-area-inset-top)) 0 0}
 }
 .list-toggle span{margin-left:5px;color:var(--green)}
 .a7-fab{
-  position:fixed;z-index:920;right:9px;top:calc(156px + env(safe-area-inset-top));
+  position:fixed;z-index:920;right:9px;top:calc(202px + env(safe-area-inset-top));
   height:32px;border-radius:16px;border:1px solid rgba(255,211,78,.45);
   background:rgba(8,26,42,.9);color:var(--gold);font-size:11px;font-weight:850;padding:0 11px;
   backdrop-filter:blur(10px)
@@ -92,13 +110,17 @@ main{position:absolute;inset:calc(96px + env(safe-area-inset-top)) 0 0}
   width:100%;display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:9px;align-items:center;
   text-align:left;border:0;border-bottom:1px solid var(--line);background:transparent;color:#fff;padding:8px 6px
 }
+.aircraft-row.military-row{background:linear-gradient(90deg,rgba(255,182,72,.09),transparent 70%)}
 .aircraft-row img{width:44px;height:34px;object-fit:cover;background:#0d253a;border-radius:8px}
 .aircraft-row strong,.aircraft-row small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.aircraft-row small{color:var(--muted);margin-top:2px;font-size:11px}
+.aircraft-row small{color:var(--muted);margin-top:3px;font-size:11px}
+.aircraft-badge{display:inline-block;padding:1px 5px;border-radius:7px;font-size:8px;font-weight:900;letter-spacing:.05em;vertical-align:1px}
+.civil-badge{color:#a9e3ff;background:rgba(21,151,229,.18);border:1px solid rgba(102,199,255,.35)}
+.military-badge{color:#ffe3b2;background:rgba(255,182,72,.16);border:1px solid rgba(255,182,72,.38)}
 .distance{color:#8ed8ff;font-size:11px}
 .empty-list{padding:22px 10px;text-align:center;color:var(--muted)}
 .details-panel{
-  position:absolute;z-index:800;left:7px;right:7px;bottom:7px;max-height:76%;overflow:auto;
+  position:absolute;z-index:800;left:7px;right:7px;bottom:7px;max-height:78%;overflow:auto;
   background:rgba(5,17,29,.99);border:1px solid rgba(79,180,241,.35);border-radius:22px;
   padding:16px 13px calc(13px + env(safe-area-inset-bottom));box-shadow:0 -12px 40px rgba(0,0,0,.48);
   transition:.22s ease
@@ -109,6 +131,7 @@ main{position:absolute;inset:calc(96px + env(safe-area-inset-top)) 0 0}
 .details-top{display:grid;grid-template-columns:96px minmax(0,1fr);gap:11px;align-items:center;padding-right:34px}
 .details-top img{width:96px;height:68px;border-radius:12px;object-fit:cover;background:#102538}
 .details-top small{color:var(--green);font-weight:900;letter-spacing:.1em}
+.details-top small.military-status{color:var(--military)}
 .details-top h2{margin:2px 0;font-size:23px}
 .details-top p{margin:0;color:var(--muted)}
 .detail-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:9px}
@@ -116,6 +139,8 @@ main{position:absolute;inset:calc(96px + env(safe-area-inset-top)) 0 0}
 .detail-grid small,.detail-grid b{display:block}
 .detail-grid small{color:var(--muted);font-size:10px;margin-bottom:3px}
 .detail-grid b{font-size:12px;word-break:break-word}
+.military-note{margin:9px 0 0;padding:9px 10px;border:1px solid rgba(255,182,72,.35);border-radius:11px;
+  background:rgba(255,182,72,.09);color:#f4d8a7;font-size:11px;line-height:1.35}
 .detail-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}
 .detail-actions button{height:39px;border-radius:11px;border:1px solid var(--line);background:#10283d;color:#fff;font-weight:800}
 .detail-actions .primary{background:#0d7fc0;border-color:#3bb6ff}
@@ -123,4 +148,5 @@ main{position:absolute;inset:calc(96px + env(safe-area-inset-top)) 0 0}
 @media(max-width:430px){
   .search-box input{font-size:14px}
   .detail-grid{grid-template-columns:repeat(2,1fr)}
+  .traffic-filter{font-size:11px}
 }

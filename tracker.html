@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>AviQuest Live Aviation</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="tracker.css?v=3" />
+  <link rel="stylesheet" href="tracker.css?v=4" />
 </head>
 <body>
   <header class="tracker-header">
@@ -26,16 +26,28 @@
     <label class="search-box">
       <span class="search-icon">⌕</span>
       <input id="searchInput" type="search" autocomplete="off"
-        placeholder="Flight, registration, airline or airport" />
+        placeholder="Flight, registration, operator or aircraft" />
       <button id="locateBtn" class="search-action" type="button" aria-label="My location" title="My location">◎</button>
       <button id="favouritesBtn" class="search-action" type="button" aria-label="Favourites" title="Favourites">★<i id="favouriteCount">0</i></button>
       <button id="savedBtn" class="search-action" type="button" aria-label="Saved" title="Saved">▣<i id="savedCount">0</i></button>
       <button id="clearSearch" class="search-action clear-action" type="button" aria-label="Clear search">×</button>
     </label>
+
+    <div class="traffic-filters" role="group" aria-label="Aircraft category">
+      <button id="trafficAll" class="traffic-filter active" type="button" data-traffic-filter="all">
+        All <span id="allTrafficCount">0</span>
+      </button>
+      <button id="trafficCivil" class="traffic-filter" type="button" data-traffic-filter="civil">
+        Civil <span id="civilTrafficCount">0</span>
+      </button>
+      <button id="trafficMilitary" class="traffic-filter military-filter" type="button" data-traffic-filter="military">
+        Military <span id="militaryTrafficCount">0</span>
+      </button>
+    </div>
   </section>
 
   <main>
-    <div id="map" aria-label="Global live aircraft map"></div>
+    <div id="map" aria-label="Live civil and military aircraft map"></div>
 
     <div class="status-pill">
       <span id="liveDot" class="live-dot"></span>
@@ -54,7 +66,7 @@
       <div class="details-top">
         <img id="aircraftPhoto" src="images/aircraft-placeholder.svg" alt="Aircraft preview" />
         <div>
-          <small id="detailStatus">LIVE</small>
+          <small id="detailStatus">LIVE CIVIL</small>
           <h2 id="detailCallsign">Aircraft</h2>
           <p id="detailReg">Registration unavailable</p>
         </div>
@@ -65,12 +77,20 @@
       </div>
       <div class="detail-grid">
         <div><small>Aircraft</small><b id="detailType">Unknown</b></div>
+        <div><small>Operator</small><b id="detailOperator">Unknown</b></div>
+        <div><small>Category</small><b id="detailClass">Civil</b></div>
         <div><small>Distance</small><b id="detailDistance">—</b></div>
         <div><small>Altitude</small><b id="detailAltitude">—</b></div>
         <div><small>Speed</small><b id="detailSpeed">—</b></div>
         <div><small>Heading</small><b id="detailHeading">—</b></div>
+        <div><small>Vertical rate</small><b id="detailVerticalRate">—</b></div>
+        <div><small>Squawk</small><b id="detailSquawk">—</b></div>
+        <div><small>Position source</small><b id="detailSource">—</b></div>
         <div><small>Updated</small><b id="detailSeen">—</b></div>
       </div>
+      <p class="military-note" id="militaryNote" hidden>
+        Military identification is based on the live source’s aircraft database flag. Some defence aircraft may be hidden, blocked, untagged or not transmitting.
+      </p>
       <div class="detail-actions">
         <button id="centreAircraft" type="button">Centre</button>
         <button id="openAr" class="primary" type="button">Open in AR</button>
@@ -85,6 +105,6 @@
   <span id="navHome" hidden></span>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="tracker.js?v=3"></script>
+  <script src="tracker.js?v=4"></script>
 </body>
 </html>
