@@ -1,0 +1,146 @@
+/* Enhanced tracker styles for OpenSky Network integration */
+
+/* Flight history panel */
+.flight-history {
+  margin-top: 12px;
+  padding: 10px;
+  background: #0b2235;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.flight-history h4 {
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  color: var(--green);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.history-item {
+  padding: 8px;
+  margin-bottom: 6px;
+  background: #071725;
+  border-radius: 8px;
+  border-left: 3px solid #1597e5;
+}
+
+.history-item small {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  margin-bottom: 2px;
+}
+
+.history-item strong {
+  display: block;
+  color: #fff;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.history-item p {
+  margin: 4px 0;
+  font-size: 12px;
+  color: #8ed8ff;
+}
+
+/* Flight route styling */
+.flight-route {
+  pointer-events: none;
+  z-index: 400;
+}
+
+/* Enhanced metadata indicators */
+.metadata-status {
+  display: inline-block;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(48, 209, 123, 0.15);
+  color: var(--green);
+  margin-left: 4px;
+}
+
+/* Aircraft metadata section */
+.aircraft-metadata {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 8px;
+  background: #0d253a;
+  border-radius: 8px;
+}
+
+.metadata-item {
+  font-size: 11px;
+}
+
+.metadata-item small {
+  display: block;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+
+.metadata-item b {
+  display: block;
+  color: #8ed8ff;
+  font-size: 12px;
+}
+
+/* Loading spinner for async data */
+.loading-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--muted);
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Action buttons for enhanced features */
+.enhanced-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.enhanced-actions button {
+  padding: 8px 10px;
+  font-size: 11px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #10283d;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.enhanced-actions button:hover {
+  background: #1a4570;
+  border-color: #1597e5;
+}
+
+.enhanced-actions button:active {
+  transform: scale(0.95);
+}
+
+/* Responsive adjustments */
+@media(max-width:430px) {
+  .flight-history {
+    max-height: 150px;
+  }
+  
+  .aircraft-metadata {
+    grid-template-columns: 1fr;
+  }
+}

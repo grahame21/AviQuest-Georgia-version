@@ -1,17 +1,19 @@
 [build]
+  command = "npm run build"
+  functions = "functions"
   publish = "."
 
-[[headers]]
-  for = "/index.html"
-  [headers.values]
-    Cache-Control = "no-cache"
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[functions]
+  node_bundler = "esbuild"
+  included_files = ["functions/**"]
 
 [[headers]]
-  for = "/*.js"
+  for = "/.netlify/functions/*"
   [headers.values]
-    Cache-Control = "public, max-age=0, must-revalidate"
-
-[[headers]]
-  for = "/*.css"
-  [headers.values]
-    Cache-Control = "public, max-age=0, must-revalidate"
+    Cache-Control = "no-cache, max-age=0"
+    Content-Type = "application/json"
