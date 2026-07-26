@@ -100,6 +100,12 @@
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
     }
 
+    .control-btn.ar {
+      background: linear-gradient(135deg, #0066ff, #00d4ff);
+      color: white;
+      font-weight: 700;
+    }
+
     /* INFO PANEL */
     .info-panel {
       position: absolute;
@@ -420,6 +426,7 @@
   <div class="controls">
     <button class="control-btn" id="favBtn" title="Favorites">♥</button>
     <button class="control-btn" id="listBtn" title="List">≡</button>
+    <button class="control-btn ar" id="arBtn" title="AR Spotter">AR</button>
     <button class="control-btn" id="volumeBtn" title="Volume">🔊</button>
     <button class="control-btn" id="compassBtn" title="Compass">🧭</button>
     <button class="control-btn" id="layersBtn" title="Layers">◫</button>
@@ -469,6 +476,6 @@
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="tracker.js?v=9"></script>
+  <script src="tracker.js?v=10"></script>
 </body>
 </html>
