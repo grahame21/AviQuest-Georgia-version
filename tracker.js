@@ -96,19 +96,39 @@ function initMap() {
   });
 
   getLocation();
-  loadAircraft();
-  
   state.pollTimer = setInterval(loadAircraft, POLL_MS);
 }
 
 function getLocation() {
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(pos => {
+  if (!navigator.geolocation) {
+    loadAircraft(true);
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    pos => {
       state.user = { lat: pos.coords.latitude, lon: pos.coords.longitude };
       updateUserMarker();
+
+      // Always start the tracker at the user's actual location.
+      state.map.setView([state.user.lat, state.user.lon], 9, { animate: false });
+      localStorage.setItem('aviquest_last_location', JSON.stringify(state.user));
       loadAircraft(true);
-    });
-  }
+    },
+    error => {
+      console.warn('Location unavailable:', error.message);
+      try {
+        const last = JSON.parse(localStorage.getItem('aviquest_last_location') || 'null');
+        if (last && Number.isFinite(last.lat) && Number.isFinite(last.lon)) {
+          state.user = last;
+          updateUserMarker();
+          state.map.setView([last.lat, last.lon], 9, { animate: false });
+        }
+      } catch (_) {}
+      loadAircraft(true);
+    },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+  );
 }
 
 function updateUserMarker() {

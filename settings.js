@@ -87,7 +87,11 @@ class SettingsController {
         contents.forEach(c => c.classList.remove('active'));
         
         tab.classList.add('active');
-        document.querySelector(`.settings-tab-content[data-tab="${tabName}"]`)?.classList.add('active');
+        const activeContent = document.querySelector(`.settings-tab-content[data-tab="${tabName}"]`);
+        if (activeContent) activeContent.classList.add('active');
+
+        const scroller = document.querySelector('.settings-content');
+        if (scroller) scroller.scrollTo({ top: 0, behavior: 'instant' });
       });
     });
   }
@@ -141,7 +145,7 @@ class SettingsController {
     const sliders = document.querySelectorAll('.settings-slider');
     
     sliders.forEach(slider => {
-      const key = slider.id === 'brightnesSlider' ? 'mapBrightness' : slider.id.replace('Slider', '');
+      const key = slider.id === 'brightnessSlider' ? 'mapBrightness' : slider.id.replace('Slider', '');
       if (this.settings[key] !== undefined) {
         slider.value = this.settings[key];
       }
@@ -210,7 +214,7 @@ class SettingsController {
 
     // Brightness
     if (this.settings.mapBrightness !== undefined) {
-      document.getElementById('brightnesSlider').value = this.settings.mapBrightness;
+      document.getElementById('brightnessSlider').value = this.settings.mapBrightness;
       const mapEl = document.getElementById('map');
       mapEl.style.filter = `brightness(${this.settings.mapBrightness}%)`;
     }
