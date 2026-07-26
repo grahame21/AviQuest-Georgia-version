@@ -1,15 +1,78 @@
 "use strict";
 
-const SOURCES = [
-  {
-    name: "Airplanes.live",
-    buildUrl: (lat, lon, radius) => `https://api.airplanes.live/v2/point/${lat}/${lon}/${radius}`
-  },
-  {
-    name: "ADSB.lol",
-    buildUrl: (lat, lon, radius) => `https://api.adsb.lol/v2/point/${lat}/${lon}/${radius}`
+const https = require('https');
+
+const USERNAME = process.env.OPENSKY_USERNAME;
+const PASSWORD = process.env.OPENSKY_PASSWORD;
+
+function getAuthHeader() {
+  if (!USERNAME || !PASSWORD) {
+    throw new Error('OpenSky credentials not configured');
   }
-];
+  const auth = Buffer.from(`${USERNAME}:${PASSWORD}`).toString('base64');
+  return `Basic ${auth}`;
+}
+
+function makeRequest(endpoint) {
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: 'opensky-network.org',
+      path: endpoint,
+      method: 'GET',
+      headers: {
+        'Authorization': getAuthHeader(),
+        'User-Agent': 'AviQuest-GGs-Adventure/2.0'
+      },
+      timeout: 10000
+    };
+
+    const request = https.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(data));
+        } catch (e) {
+          reject(new Error(`Invalid JSON: ${e.message}`));
+        }
+      });
+    });
+
+    request.on('error', reject);
+    request.on('timeout', () => {
+      request.abort();
+      reject(new Error('Request timeout'));
+    });
+    request.end();
+  });
+}
+
+function normaliseAircraft(state) {
+  return {
+    hex: state[0],
+    callsign: state[1] ? state[1].trim() : null,
+    country: state[2],
+    lat: state[6],
+    lon: state[5],
+    altitude: state[7],
+    track: Number.isFinite(state[10]) ? state[10] : null,
+    speed: state[9] ? Math.round(state[9] * 1.94384) : null,
+    verticalRate: state[11] ? Math.round(state[11] * 196.85) : null,
+    squawk: state[14],
+    onGround: Boolean(state[8]),
+    sourceType: 'ADS-B ICAO',
+    seen: state[4],
+    geoAltitude: state[13],
+    isMilitary: false,
+    registration: null,
+    type: null,
+    description: null,
+    operator: null,
+    category: null,
+    emergency: null,
+    seenPosition: state[4]
+  };
+}
 
 const JSON_HEADERS = {
   "Content-Type": "application/json; charset=utf-8",
@@ -27,98 +90,6 @@ function response(statusCode, body) {
   };
 }
 
-function finiteNumber(value) {
-  const number = Number(value);
-  return Number.isFinite(number) ? number : null;
-}
-
-function integerNumber(value, fallback = 0) {
-  const number = Number.parseInt(value, 10);
-  return Number.isFinite(number) ? number : fallback;
-}
-
-function cleanText(value) {
-  return String(value ?? "").trim();
-}
-
-function normaliseAltitude(value) {
-  if (String(value).toLowerCase() === "ground") return 0;
-  return finiteNumber(value);
-}
-
-function normaliseAircraft(record) {
-  const latitude = finiteNumber(record.lat ?? record.latitude ?? record.lastPosition?.lat);
-  const longitude = finiteNumber(record.lon ?? record.lng ?? record.longitude ?? record.lastPosition?.lon);
-  if (latitude === null || longitude === null) return null;
-
-  const seenPosition = finiteNumber(
-    record.seen_pos ?? record.seenPosition ?? record.lastPosition?.seen_pos ?? record.lastPosition?.seen
-  );
-  const altitude = normaliseAltitude(record.alt_baro ?? record.altitude ?? record.alt_geom);
-  const dbFlags = integerNumber(record.dbFlags ?? record.db_flags, 0);
-
-  return {
-    hex: cleanText(record.hex ?? record.icao ?? record.icao24).replace(/^~/, ""),
-    callsign: cleanText(record.flight ?? record.callsign ?? record.call),
-    registration: cleanText(record.r ?? record.registration ?? record.reg),
-    type: cleanText(record.t ?? record.aircraft_type),
-    description: cleanText(record.desc ?? record.description),
-    operator: cleanText(record.ownOp ?? record.operator ?? record.owner),
-    lat: latitude,
-    lon: longitude,
-    altitude,
-    alt_baro: normaliseAltitude(record.alt_baro),
-    alt_geom: normaliseAltitude(record.alt_geom),
-    speed: finiteNumber(record.gs ?? record.speed ?? record.ground_speed),
-    gs: finiteNumber(record.gs ?? record.speed ?? record.ground_speed),
-    track: finiteNumber(record.track ?? record.heading ?? record.true_heading),
-    verticalRate: finiteNumber(record.baro_rate ?? record.geom_rate ?? record.vertical_rate),
-    squawk: cleanText(record.squawk),
-    category: cleanText(record.category),
-    seen: finiteNumber(record.seen),
-    seenPosition,
-    emergency: cleanText(record.emergency),
-    sourceType: cleanText(record.type),
-    dbFlags,
-    isMilitary: Boolean(dbFlags & 1),
-    isInteresting: Boolean(dbFlags & 2),
-    isPia: Boolean(dbFlags & 4),
-    isLadd: Boolean(dbFlags & 8)
-  };
-}
-
-async function fetchJson(url) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 7500);
-
-  try {
-    const res = await fetch(url, {
-      headers: {
-        Accept: "application/json",
-        "User-Agent": "AviQuest-GGs-Adventure/2.0"
-      },
-      signal: controller.signal
-    });
-
-    const text = await res.text();
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch (error) {
-      throw new Error(`Non-JSON response (${res.status})`);
-    }
-
-    if (!res.ok) {
-      const reason = data?.message || data?.error || data?.msg || `HTTP ${res.status}`;
-      throw new Error(reason);
-    }
-
-    return data;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
 exports.handler = async function handler(event) {
   if (event.httpMethod === "OPTIONS") {
     return response(204, {});
@@ -128,56 +99,70 @@ exports.handler = async function handler(event) {
     return response(405, { error: "Only GET requests are supported." });
   }
 
-  const query = event.queryStringParameters || {};
-  const latitude = finiteNumber(query.lat);
-  const longitude = finiteNumber(query.lon);
-  const requestedRadius = finiteNumber(query.radius);
-  const radius = Math.min(250, Math.max(1, requestedRadius ?? 50));
+  try {
+    const query = event.queryStringParameters || {};
+    const lat = parseFloat(query.lat);
+    const lon = parseFloat(query.lon);
+    const radius = parseFloat(query.radius) || 50;
 
-  if (latitude === null || latitude < -90 || latitude > 90) {
-    return response(400, { error: "A valid latitude from -90 to 90 is required." });
-  }
+    // Validate coordinates
+    if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
+      return response(400, { error: "Valid latitude (-90 to 90) required" });
+    }
+    if (!Number.isFinite(lon) || lon < -180 || lon > 180) {
+      return response(400, { error: "Valid longitude (-180 to 180) required" });
+    }
 
-  if (longitude === null || longitude < -180 || longitude > 180) {
-    return response(400, { error: "A valid longitude from -180 to 180 is required." });
-  }
+    // Calculate bounds (convert radius nm to degrees, roughly 1 degree = 60 nm)
+    const radiusDeg = radius / 60;
+    const minLat = lat - radiusDeg;
+    const maxLat = lat + radiusDeg;
+    const minLon = lon - radiusDeg;
+    const maxLon = lon + radiusDeg;
 
-  const errors = [];
+    // Fetch from OpenSky Network
+    const endpoint = `/v1/states/all?lamin=${minLat}&lamax=${maxLat}&lomin=${minLon}&lomax=${maxLon}`;
+    const data = await makeRequest(endpoint);
 
-  for (const source of SOURCES) {
-    try {
-      const data = await fetchJson(source.buildUrl(latitude, longitude, radius));
-      const rawAircraft = Array.isArray(data?.ac)
-        ? data.ac
-        : Array.isArray(data?.aircraft)
-          ? data.aircraft
-          : [];
-
-      const aircraft = rawAircraft
-        .map(normaliseAircraft)
-        .filter(Boolean)
-        .filter((record) => record.seenPosition === null || record.seenPosition <= 120);
-
-      const militaryTotal = aircraft.filter((record) => record.isMilitary).length;
-
+    if (!data || !data.states) {
       return response(200, {
         ok: true,
-        source: source.name,
+        source: 'OpenSky Network',
         requestedAt: new Date().toISOString(),
         radiusNm: radius,
-        centre: { lat: latitude, lon: longitude },
-        total: aircraft.length,
-        civilTotal: aircraft.length - militaryTotal,
-        militaryTotal,
-        aircraft
+        centre: { lat, lon },
+        total: 0,
+        civilTotal: 0,
+        militaryTotal: 0,
+        aircraft: []
       });
-    } catch (error) {
-      errors.push(`${source.name}: ${error.name === "AbortError" ? "timeout" : error.message}`);
     }
-  }
 
-  return response(502, {
-    error: "Neither live aircraft source responded successfully.",
-    details: errors
-  });
+    // Transform and filter aircraft
+    const aircraft = (data.states || [])
+      .filter(state => state[6] !== null && state[5] !== null) // Valid lat/lon
+      .map(normaliseAircraft)
+      .filter(ac => ac.seenPosition === null || ac.seenPosition <= 120);
+
+    const militaryTotal = aircraft.filter(ac => ac.isMilitary).length;
+
+    return response(200, {
+      ok: true,
+      source: 'OpenSky Network',
+      requestedAt: new Date().toISOString(),
+      radiusNm: radius,
+      centre: { lat, lon },
+      total: aircraft.length,
+      civilTotal: aircraft.length - militaryTotal,
+      militaryTotal,
+      aircraft
+    });
+
+  } catch (error) {
+    console.error('Aircraft request error:', error);
+    return response(502, {
+      error: 'Failed to fetch aircraft data',
+      details: error.message
+    });
+  }
 };
