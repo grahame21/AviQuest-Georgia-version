@@ -19,20 +19,28 @@
       color: #333;
     }
 
-    #map {
-      height: 100%;
-      width: 100%;
-      position: absolute;
-      inset: 0;
+    body {
+      display: flex;
+      flex-direction: column;
     }
 
-    /* SEARCH BAR */
-    .search-container {
-      position: fixed;
-      top: 12px;
-      left: 12px;
-      right: 12px;
+    #map {
+      flex: 1;
+      width: 100%;
+      position: relative;
+      min-height: 0;
+    }
+
+    /* TOP SEARCH BAR */
+    .top-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
       z-index: 100;
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(10px);
     }
 
     .search-box {
@@ -41,7 +49,6 @@
       background: rgba(0, 0, 0, 0.7);
       border-radius: 24px;
       padding: 0 16px;
-      backdrop-filter: blur(10px);
       height: 44px;
       gap: 10px;
     }
@@ -65,12 +72,15 @@
     }
 
     /* BOTTOM CONTROLS */
-    .controls {
-      position: fixed;
-      bottom: 20px;
-      left: 12px;
-      right: 12px;
+    .bottom-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
       z-index: 100;
+      padding: 20px 12px;
+      background: rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(10px);
       display: flex;
       gap: 12px;
       justify-content: center;
@@ -106,14 +116,14 @@
 
     /* INFO PANEL */
     .info-panel {
-      position: fixed;
+      position: absolute;
       top: 70px;
       right: 12px;
       left: 12px;
       background: rgba(255, 255, 255, 0.95);
       border-radius: 12px;
       padding: 16px;
-      max-height: 60vh;
+      max-height: 50vh;
       overflow-y: auto;
       box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
       display: none;
@@ -342,7 +352,7 @@
       color: #000;
     }
 
-    /* HIDE ZOOM CONTROLS */
+    /* HIDE LEAFLET CONTROLS */
     .leaflet-control-zoom {
       display: none !important;
     }
@@ -354,58 +364,58 @@
   </style>
 </head>
 <body>
-  <div id="map"></div>
-
-  <!-- SEARCH BAR -->
-  <div class="search-container">
-    <div class="search-box">
-      <span class="search-icon">🔍</span>
-      <input id="searchInput" type="text" placeholder="flight or tail number, airport name or city">
-    </div>
-  </div>
-
-  <!-- INFO PANEL -->
-  <div class="info-panel" id="infoPanel">
-    <div class="info-header">
-      <div class="info-title" id="infoCallsign">AIRCRAFT</div>
-      <button class="close-btn" onclick="document.getElementById('infoPanel').classList.remove('visible')">✕</button>
-    </div>
-    <div class="info-grid">
-      <div class="info-item">
-        <div class="info-label">Altitude</div>
-        <div class="info-value" id="infoAltitude">—</div>
-      </div>
-      <div class="info-item">
-        <div class="info-label">Speed</div>
-        <div class="info-value" id="infoSpeed">—</div>
-      </div>
-      <div class="info-item">
-        <div class="info-label">Registration</div>
-        <div class="info-value" id="infoReg">—</div>
-      </div>
-      <div class="info-item">
-        <div class="info-label">Heading</div>
-        <div class="info-value" id="infoHeading">—</div>
-      </div>
-      <div class="info-item">
-        <div class="info-label">Distance</div>
-        <div class="info-value" id="infoDistance">—</div>
-      </div>
-      <div class="info-item">
-        <div class="info-label">Operator</div>
-        <div class="info-value" id="infoOperator">—</div>
+  <div id="map">
+    <!-- TOP SEARCH BAR -->
+    <div class="top-bar">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input id="searchInput" type="text" placeholder="flight or tail number, airport name or city">
       </div>
     </div>
-  </div>
 
-  <!-- BOTTOM CONTROLS -->
-  <div class="controls">
-    <button class="control-btn" id="favBtn" title="Favorites">♥</button>
-    <button class="control-btn" id="listBtn" title="List">≡</button>
-    <button class="control-btn ar" id="arBtn" title="AR Spotter">AR</button>
-    <button class="control-btn" id="volumeBtn" title="Volume">🔊</button>
-    <button class="control-btn" id="compassBtn" title="Compass">🧭</button>
-    <button class="control-btn" id="layersBtn" title="Layers">◫</button>
+    <!-- INFO PANEL -->
+    <div class="info-panel" id="infoPanel">
+      <div class="info-header">
+        <div class="info-title" id="infoCallsign">AIRCRAFT</div>
+        <button class="close-btn" onclick="document.getElementById('infoPanel').classList.remove('visible')">✕</button>
+      </div>
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-label">Altitude</div>
+          <div class="info-value" id="infoAltitude">—</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Speed</div>
+          <div class="info-value" id="infoSpeed">—</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Registration</div>
+          <div class="info-value" id="infoReg">—</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Heading</div>
+          <div class="info-value" id="infoHeading">—</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Distance</div>
+          <div class="info-value" id="infoDistance">—</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Operator</div>
+          <div class="info-value" id="infoOperator">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOTTOM CONTROLS -->
+    <div class="bottom-bar">
+      <button class="control-btn" id="favBtn" title="Favorites">♥</button>
+      <button class="control-btn" id="listBtn" title="List">≡</button>
+      <button class="control-btn ar" id="arBtn" title="AR Spotter">AR</button>
+      <button class="control-btn" id="volumeBtn" title="Volume">🔊</button>
+      <button class="control-btn" id="compassBtn" title="Compass">🧭</button>
+      <button class="control-btn" id="layersBtn" title="Layers">◫</button>
+    </div>
   </div>
 
   <!-- SIDEBAR LIST -->
@@ -451,6 +461,6 @@
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="tracker.js?v=11"></script>
+  <script src="tracker.js?v=12"></script>
 </body>
 </html>
