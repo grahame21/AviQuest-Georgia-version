@@ -35,7 +35,7 @@ function initMap() {
   getLocation();
   loadAircraft();
   
-  document.getElementById('pollTimer') || setInterval(loadAircraft, state.settings.updateFreq || POLL_MS);
+  state.pollTimer = setInterval(loadAircraft, state.settings.updateFreq || POLL_MS);
 }
 
 function getLocation() {
@@ -67,8 +67,8 @@ function updateUserMarker() {
 
 async function loadAircraft(force = false) {
   try {
-    const bounds = state.map.getBounds();
-    const url = `/.netlify/functions/nearby-aircraft?lat=${state.map.getCenter().lat}&lon=${state.map.getCenter().lng}&radius=150&_=${Date.now()}`;
+    const center = state.map.getCenter();
+    const url = `/.netlify/functions/nearby-aircraft?lat=${center.lat}&lon=${center.lng}&radius=150&_=${Date.now()}`;
     
     const response = await fetch(url);
     const data = await response.json();
@@ -187,6 +187,9 @@ function selectAircraft(aircraft, element) {
   
   document.getElementById('infoOperator').textContent = clean(aircraft.operator) || '—';
   panel.classList.add('visible');
+  
+  // Hide sidebar on mobile
+  closeSidebar();
 }
 
 function filterAircraft() {
@@ -213,8 +216,6 @@ function filterAircraft() {
 }
 
 function updateStats() {
-  const civil = state.aircraft.filter(a => !a.isMilitary).length;
-  const military = state.aircraft.filter(a => a.isMilitary).length;
   document.getElementById('aircraftCount').textContent = `${state.aircraft.length} aircraft`;
 }
 
@@ -262,7 +263,19 @@ function clean(value) {
   return String(value || '').trim();
 }
 
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('visible');
+}
+
+function closeSidebar() {
+  if (window.innerWidth <= 768) {
+    document.getElementById('sidebar').classList.remove('visible');
+  }
+}
+
 // Event Listeners
+document.getElementById('toggleSidebar').addEventListener('click', toggleSidebar);
+
 document.getElementById('settingsBtn').addEventListener('click', () => {
   document.getElementById('settingsModal').classList.add('show');
 });
@@ -274,6 +287,11 @@ document.getElementById('saveSettings').addEventListener('click', () => {
   };
   saveSettings(settings);
   state.settings = settings;
+  
+  // Restart polling with new frequency
+  if (state.pollTimer) clearInterval(state.pollTimer);
+  state.pollTimer = setInterval(loadAircraft, settings.updateFreq);
+  
   document.getElementById('settingsModal').classList.remove('show');
 });
 
@@ -287,6 +305,15 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
 
 document.getElementById('searchInput').addEventListener('input', () => {
   renderAircraft();
+});
+
+// Close sidebar when clicking outside on mobile
+document.addEventListener('click', (e) => {
+  const sidebar = document.getElementById('sidebar');
+  const toggle = document.getElementById('toggleSidebar');
+  if (window.innerWidth <= 768 && !sidebar.contains(e.target) && !toggle.contains(e.target)) {
+    closeSidebar();
+  }
 });
 
 // Initialize
