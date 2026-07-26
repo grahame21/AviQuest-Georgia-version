@@ -8,8 +8,98 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>AviQuest Live Aviation</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="tracker.css?v=4" />
-  <link rel="stylesheet" href="tracker-settings.css?v=1" />
+  <link rel="stylesheet" href="tracker.css?v=5" />
+  <style>
+    .settings-panel {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+    }
+    .settings-panel.hidden {
+      display: none;
+    }
+    .settings-panel > div {
+      background: #0a1419;
+      border: 1px solid #1a3a4a;
+      border-radius: 16px;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      padding: 20px;
+    }
+    .settings-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .settings-header h2 {
+      margin: 0;
+      font-size: 18px;
+      color: #fff;
+    }
+    .close-settings {
+      width: 36px;
+      height: 36px;
+      border: 1px solid #1a3a4a;
+      background: #10283d;
+      color: #fff;
+      border-radius: 50%;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    .setting-group {
+      margin-bottom: 16px;
+    }
+    .setting-group label {
+      display: block;
+      font-weight: 800;
+      color: #15d742;
+      text-transform: uppercase;
+      font-size: 11px;
+      margin-bottom: 8px;
+    }
+    .setting-group select {
+      width: 100%;
+      padding: 10px;
+      background: #0b2235;
+      border: 1px solid #1a3a4a;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 13px;
+    }
+    .settings-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .settings-actions button {
+      padding: 10px 16px;
+      border: 1px solid #1a3a4a;
+      border-radius: 8px;
+      font-weight: 800;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .settings-actions .primary {
+      background: #1597e5;
+      color: #fff;
+      border-color: #1597e5;
+    }
+    .settings-actions .secondary {
+      background: transparent;
+      color: #888;
+    }
+  </style>
 </head>
 <body>
   <header class="tracker-header">
@@ -101,137 +191,36 @@
       </div>
     </section>
 
-    <!-- Settings Panel -->
-    <div id="settingsPanel" class="settings-panel hidden" aria-label="Flight Tracker Settings">
+    <!-- Settings Panel - INLINE -->
+    <div id="settingsPanel" class="settings-panel hidden">
       <div>
         <div class="settings-header">
           <h2>Flight Tracker Settings</h2>
           <button class="close-settings" id="closeSettingsBtn" type="button">×</button>
         </div>
         
-        <div class="settings-content">
-          <!-- Map View Section -->
-          <div class="setting-group">
-            <label for="mapViewSelect">Map View</label>
-            <select id="mapViewSelect">
-              <option value="global">Global (All Aircraft Worldwide)</option>
-              <option value="region">Region (Australia + NZ)</option>
-              <option value="local">Local (500km radius)</option>
-            </select>
-          </div>
-          
-          <!-- Update Frequency Section -->
-          <div class="setting-group">
-            <label for="updateFreqSelect">Update Frequency</label>
-            <select id="updateFreqSelect">
-              <option value="1000">Every 1 second</option>
-              <option value="5000" selected>Every 5 seconds</option>
-              <option value="10000">Every 10 seconds</option>
-              <option value="30000">Every 30 seconds</option>
-              <option value="60000">Every 1 minute</option>
-            </select>
-            <small>⚠️ Faster updates use more data</small>
-          </div>
-          
-          <!-- Map Overlays Section -->
-          <div class="setting-group">
-            <label>Map Overlays</label>
-            <div class="checkbox-group">
-              <label><input type="checkbox" class="overlay-toggle" data-overlay="weather" checked /> Weather</label>
-              <label><input type="checkbox" class="overlay-toggle" data-overlay="clouds" checked /> Cloud Coverage</label>
-              <label><input type="checkbox" class="overlay-toggle" data-overlay="cloudCeiling" checked /> Cloud Ceiling (Low Level)</label>
-              <label><input type="checkbox" class="overlay-toggle" data-overlay="waypoints" checked /> Waypoints</label>
-              <label><input type="checkbox" class="overlay-toggle" data-overlay="airways" checked /> Airways</label>
-              <label><input type="checkbox" class="overlay-toggle" data-overlay="airports" checked /> Airports</label>
-              <label><input type="checkbox" class="overlay-toggle" data-overlay="militaryAirspace" /> Military Airspace</label>
-              <label><input type="checkbox" class="overlay-toggle" data-overlay="restrictedAirspace" /> Restricted Airspace</label>
-            </div>
-          </div>
-          
-          <!-- Weather Source Section -->
-          <div class="setting-group">
-            <label for="weatherSourceSelect">Weather Data Source (Australia)</label>
-            <select id="weatherSourceSelect">
-              <option value="bom" selected>Bureau of Meteorology (BoM) - Most Accurate</option>
-              <option value="openweather">OpenWeatherMap - Worldwide</option>
-            </select>
-            <small>✓ BoM recommended for Australia tracking</small>
-          </div>
-          
-          <!-- Aircraft Filters Section -->
-          <div class="setting-group">
-            <label>Aircraft Display Filters</label>
-            <div class="checkbox-group">
-              <label><input type="checkbox" id="showCivilCheck" checked /> Show Civil Aircraft</label>
-              <label><input type="checkbox" id="showMilitaryCheck" checked /> Show Military Aircraft</label>
-              <label><input type="checkbox" id="showGroundCheck" /> Show Aircraft on Ground</label>
-            </div>
-          </div>
-          
-          <!-- Capture Settings Section -->
-          <div class="setting-group">
-            <label>Capture Settings</label>
-            <div class="checkbox-group">
-              <label><input type="checkbox" id="autoCaptureCheck" /> Auto-Capture Nearby Flights</label>
-              <label><input type="checkbox" id="captureLocationCheck" checked /> Include Location Data</label>
-              <label><input type="checkbox" id="capturePhotosCheck" checked /> Capture Photos</label>
-            </div>
-          </div>
-          
-          <!-- Data Source Section -->
-          <div class="setting-group">
-            <label>Data Source Configuration</label>
-            <div class="data-source-info">
-              <h4>✓ Current: OpenSky Network (Free)</h4>
-              <p>Coverage: ~20,000-50,000 aircraft worldwide</p>
-              <p>Update: Every 5-10 seconds</p>
-              <p>Cost: $0</p>
-              <small>No ADS-B capture equipment needed</small>
-            </div>
-            
-            <details class="premium-option">
-              <summary>🔐 Upgrade to FlightRadar24 Premium (Optional)</summary>
-              <div class="premium-settings">
-                <input type="text" id="fr24ApiKey" placeholder="FlightRadar24 API Key" />
-                <button type="button" onclick="window.open('https://www.flightradar24.com/premium/', '_blank')">Get API Key</button>
-                <small>For premium: 200,000+ aircraft, real-time updates, $100-500/month</small>
-              </div>
-            </details>
-          </div>
-          
-          <!-- Units Section -->
-          <div class="setting-group">
-            <label>Display Units</label>
-            <div class="units-grid">
-              <div>
-                <label for="distanceUnitSelect">Distance</label>
-                <select id="distanceUnitSelect">
-                  <option value="km" selected>Kilometers (km)</option>
-                  <option value="nm">Nautical Miles (nm)</option>
-                </select>
-              </div>
-              <div>
-                <label for="altitudeUnitSelect">Altitude</label>
-                <select id="altitudeUnitSelect">
-                  <option value="ft" selected>Feet (ft)</option>
-                  <option value="m">Meters (m)</option>
-                </select>
-              </div>
-              <div>
-                <label for="speedUnitSelect">Speed</label>
-                <select id="speedUnitSelect">
-                  <option value="kt" selected>Knots (kt)</option>
-                  <option value="km/h">Kilometers/hour</option>
-                </select>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Action Buttons -->
-          <div class="settings-actions">
-            <button type="button" id="resetSettingsBtn" class="secondary">Reset to Defaults</button>
-            <button type="button" id="saveSettingsBtn" class="primary">Save Changes</button>
-          </div>
+        <div class="setting-group">
+          <label for="updateFreqSelect">Update Frequency</label>
+          <select id="updateFreqSelect">
+            <option value="1000">Every 1 second</option>
+            <option value="5000" selected>Every 5 seconds</option>
+            <option value="10000">Every 10 seconds</option>
+            <option value="30000">Every 30 seconds</option>
+            <option value="60000">Every 1 minute</option>
+          </select>
+        </div>
+
+        <div class="setting-group">
+          <label for="weatherSourceSelect">Weather Source (Australia)</label>
+          <select id="weatherSourceSelect">
+            <option value="bom" selected>Bureau of Meteorology - Most Accurate</option>
+            <option value="openweather">OpenWeatherMap - Worldwide</option>
+          </select>
+        </div>
+
+        <div class="settings-actions">
+          <button type="button" id="resetSettingsBtn" class="secondary">Reset</button>
+          <button type="button" id="saveSettingsBtn" class="primary">Save</button>
         </div>
       </div>
     </div>
@@ -244,8 +233,6 @@
   <span id="navHome" hidden></span>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="tracker-settings.js?v=1"></script>
-  <script src="tracker-flight-plans.js?v=1"></script>
-  <script src="tracker.js?v=5"></script>
+  <script src="tracker.js?v=6"></script>
 </body>
 </html>
