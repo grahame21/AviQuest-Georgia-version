@@ -8,31 +8,31 @@ let state = {
   selected: null,
   user: null,
   pollTimer: null,
-  mapType: 'apple',
+  mapType: 'standard',
   settings: loadSettings()
 };
 
 const mapLayers = {
-  apple: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+  standard: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
     maxZoom: 18,
-    attribution: '© Apple'
+    attribution: '© Esri'
   }),
-  google: L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-    maxZoom: 20,
-    attribution: '© Google'
+  satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 18,
+    attribution: '© Esri'
+  }),
+  hybrid: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 18,
+    attribution: '© Esri'
   })
 };
 
 function loadSettings() {
   try {
-    return JSON.parse(localStorage.getItem('tracker_settings') || '{}');
+    return JSON.parse(localStorage.getItem('aviquest_settings') || '{}');
   } catch {
     return {};
   }
-}
-
-function saveSettings(settings) {
-  localStorage.setItem('tracker_settings', JSON.stringify(settings));
 }
 
 function initMap() {
@@ -41,31 +41,28 @@ function initMap() {
     preferCanvas: true
   }).setView([-25, 134], 6);
   
-  const initialMapType = state.settings.mapType || 'apple';
-  mapLayers[initialMapType].addTo(state.map);
-  state.currentLayer = mapLayers[initialMapType];
-  state.mapType = initialMapType;
+  const mapType = state.settings.mapType || 'standard';
+  mapLayers[mapType].addTo(state.map);
+  state.currentLayer = mapLayers[mapType];
+  state.mapType = mapType;
 
-  // Load settings into UI
-  loadSettingsToUI();
-  
+  // Listen for settings changes
+  window.addEventListener('settingsChanged', (e) => {
+    const settings = e.detail;
+    
+    // Handle map type change
+    if (settings.mapType && settings.mapType !== state.mapType) {
+      state.map.removeLayer(state.currentLayer);
+      state.currentLayer = mapLayers[settings.mapType];
+      state.currentLayer.addTo(state.map);
+      state.mapType = settings.mapType;
+    }
+  });
+
   getLocation();
   loadAircraft();
   
-  state.pollTimer = setInterval(loadAircraft, state.settings.updateFreq || POLL_MS);
-}
-
-function loadSettingsToUI() {
-  document.getElementById('mapType').value = state.settings.mapType || 'apple';
-  document.getElementById('updateFreq').value = state.settings.updateFreq || 5000;
-  document.getElementById('altMin').value = state.settings.altMin || 0;
-  document.getElementById('altMax').value = state.settings.altMax || 50000;
-  document.getElementById('speedMin').value = state.settings.speedMin || 0;
-  document.getElementById('speedMax').value = state.settings.speedMax || 600;
-  document.getElementById('showGround').checked = state.settings.showGround !== false;
-  document.getElementById('showMilitary').checked = state.settings.showMilitary !== false;
-  document.getElementById('typeFilter').value = state.settings.typeFilter || '';
-  document.getElementById('callsignPattern').value = state.settings.callsignPattern || '';
+  state.pollTimer = setInterval(loadAircraft, POLL_MS);
 }
 
 function getLocation() {
@@ -184,12 +181,20 @@ function renderSidebar() {
     const distance = state.user ? 
       calculateDistance(state.user.lat, state.user.lon, aircraft.lat, aircraft.lon) : null;
     
+    const altUnit = state.settings.altitudeUnitSelect === 'm' ? 'm' : 'ft';
+    const altitude = state.settings.altitudeUnitSelect === 'm' ? 
+      Math.round(Number(aircraft.altitude) * 0.3048) : aircraft.altitude;
+    
+    const speedUnit = state.settings.speedUnitSelect || 'kt';
+    const speedConversions = { kmh: 1.852, mph: 1.15078, kt: 1 };
+    const speed = Math.round(Number(aircraft.speed) * (speedConversions[speedUnit] || 1));
+    
     item.innerHTML = `
       <div class="aircraft-callsign">${callsign}</div>
       <div class="aircraft-details">
         <div>${reg} • ${type}</div>
-        <div>${formatAlt(aircraft.altitude)} • ${formatSpeed(aircraft.speed)}</div>
-        ${distance ? `<div>${distance.toFixed(1)} km away</div>` : ''}
+        <div>${formatNumber(altitude)} ${altUnit} • ${speed} ${speedUnit}</div>
+        ${distance ? `<div>${formatDistance(distance)}</div>` : ''}
       </div>
     `;
     
@@ -201,64 +206,28 @@ function renderSidebar() {
 function filterAircraft() {
   let list = state.aircraft;
   
-  // Search filter
   const mainSearch = document.getElementById('searchInput').value.toLowerCase();
   const sidebarSearch = document.getElementById('sidebarSearch').value.toLowerCase();
   const query = mainSearch || sidebarSearch;
-  
-  // Altitude filter
-  const altMin = parseInt(document.getElementById('altMin').value) || 0;
-  const altMax = parseInt(document.getElementById('altMax').value) || 50000;
-  
-  // Speed filter
-  const speedMin = parseInt(document.getElementById('speedMin').value) || 0;
-  const speedMax = parseInt(document.getElementById('speedMax').value) || 600;
-  
-  // Ground aircraft toggle
-  const showGround = document.getElementById('showGround').checked;
-  
-  // Military toggle
-  const showMilitary = document.getElementById('showMilitary').checked;
-  
-  // Aircraft type filter
-  const typeFilter = clean(document.getElementById('typeFilter').value).toUpperCase();
-  
-  // Callsign pattern
-  const callsignPattern = clean(document.getElementById('callsignPattern').value);
   
   list = list.filter(a => {
     const altitude = Number(a.altitude) || 0;
     const speed = Number(a.speed) || 0;
     
-    // Altitude check
-    if (altitude < altMin || altitude > altMax) return false;
+    // Traffic type filters
+    const isAirborne = altitude > 0;
+    const isGround = altitude === 0;
+    const isHeli = clean(a.type).toUpperCase().includes('H');
+    const isMilitary = clean(a.callsign).toUpperCase().match(/MIL|USAF|NAVY|ARMY|COAST|RAF|RAAF/);
     
-    // Speed check
-    if (speed < speedMin || speed > speedMax) return false;
+    if (isAirborne && !state.settings.traffic_airborne) return false;
+    if (isGround && !state.settings.traffic_ground) return false;
+    if (isHeli && !state.settings.traffic_heli) return false;
+    if (isMilitary && !state.settings.traffic_military) return false;
     
-    // Ground aircraft check
-    if (!showGround && altitude === 0) return false;
-    
-    // Military check (simple: check if callsign contains military indicators)
-    if (!showMilitary) {
-      const callsign = clean(a.callsign).toUpperCase();
-      const militaryIndicators = ['MIL', 'USAF', 'NAVY', 'ARMY', 'COAST', 'RAF', 'RAAF'];
-      if (militaryIndicators.some(ind => callsign.includes(ind))) return false;
-    }
-    
-    // Aircraft type filter
-    if (typeFilter) {
-      const aircraftType = clean(a.type).toUpperCase();
-      if (!aircraftType.includes(typeFilter)) return false;
-    }
-    
-    // Callsign pattern filter
-    if (callsignPattern) {
-      const callsign = clean(a.callsign).toUpperCase();
-      const pattern = callsignPattern.replace(/\*/g, '.*').toUpperCase();
-      const regex = new RegExp(`^${pattern}$`);
-      if (!regex.test(callsign)) return false;
-    }
+    // Data source filters
+    if (!state.settings.source_adsb && a.source === 'adsb') return false;
+    if (!state.settings.source_mlat && a.source === 'mlat') return false;
     
     // Search filter
     if (query) {
@@ -305,16 +274,25 @@ function selectAircraft(aircraft) {
   }
   
   const panel = document.getElementById('infoPanel');
+  const altUnit = state.settings.altitudeUnitSelect === 'm' ? 'm' : 'ft';
+  const altitude = state.settings.altitudeUnitSelect === 'm' ? 
+    Math.round(Number(aircraft.altitude) * 0.3048) : aircraft.altitude;
+  
+  const speedUnit = state.settings.speedUnitSelect || 'kt';
+  const speedConversions = { kmh: 1.852, mph: 1.15078, kt: 1 };
+  const speed = Math.round(Number(aircraft.speed) * (speedConversions[speedUnit] || 1));
+  
   document.getElementById('infoCallsign').textContent = 
     clean(aircraft.callsign) || clean(aircraft.registration) || aircraft.hex;
-  document.getElementById('infoAltitude').textContent = formatAlt(aircraft.altitude);
-  document.getElementById('infoSpeed').textContent = formatSpeed(aircraft.speed);
+  document.getElementById('infoAltitude').textContent = formatNumber(altitude) + ' ' + altUnit;
+  document.getElementById('infoSpeed').textContent = speed + ' ' + speedUnit;
   document.getElementById('infoReg').textContent = clean(aircraft.registration) || '—';
   document.getElementById('infoHeading').textContent = formatHeading(aircraft.track);
   
   if (state.user) {
     const dist = calculateDistance(state.user.lat, state.user.lon, aircraft.lat, aircraft.lon);
-    document.getElementById('infoDistance').textContent = dist.toFixed(1) + ' km';
+    const distUnit = state.settings.distanceUnitSelect || 'km';
+    document.getElementById('infoDistance').textContent = formatDistance(dist, distUnit);
   }
   
   document.getElementById('infoOperator').textContent = clean(aircraft.operator) || '—';
@@ -334,16 +312,20 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
-function formatAlt(feet) {
-  if (!feet) return '—';
-  const num = Number(feet);
-  if (num === 0) return 'Ground';
-  return Math.round(num).toLocaleString() + ' ft';
+function formatDistance(km, unit = 'km') {
+  if (!km) return '—';
+  const conversions = { 
+    km: { factor: 1, label: 'km' },
+    mi: { factor: 0.621371, label: 'mi' },
+    nm: { factor: 0.539957, label: 'nm' }
+  };
+  const conv = conversions[unit] || conversions.km;
+  return (km * conv.factor).toFixed(1) + ' ' + conv.label;
 }
 
-function formatSpeed(knots) {
-  if (!knots) return '—';
-  return Math.round(Number(knots)) + ' kt';
+function formatNumber(num) {
+  if (!num && num !== 0) return '—';
+  return Math.round(Number(num)).toLocaleString();
 }
 
 function formatHeading(degrees) {
@@ -367,57 +349,8 @@ document.getElementById('sidebarSearch').addEventListener('input', () => {
   renderSidebar();
 });
 
-// Filter listeners
-['altMin', 'altMax', 'speedMin', 'speedMax', 'showGround', 'showMilitary', 'typeFilter', 'callsignPattern'].forEach(id => {
-  document.getElementById(id).addEventListener('change', () => {
-    renderAircraft();
-    renderSidebar();
-  });
-  document.getElementById(id).addEventListener('input', () => {
-    renderAircraft();
-    renderSidebar();
-  });
-});
-
 document.getElementById('listBtn').addEventListener('click', () => {
   document.getElementById('sidebar').classList.toggle('open');
-});
-
-document.getElementById('layersBtn').addEventListener('click', () => {
-  document.getElementById('settingsModal').classList.add('show');
-});
-
-document.getElementById('saveSettings').addEventListener('click', () => {
-  const settings = {
-    updateFreq: parseInt(document.getElementById('updateFreq').value || 5000),
-    mapType: document.getElementById('mapType').value,
-    altMin: parseInt(document.getElementById('altMin').value || 0),
-    altMax: parseInt(document.getElementById('altMax').value || 50000),
-    speedMin: parseInt(document.getElementById('speedMin').value || 0),
-    speedMax: parseInt(document.getElementById('speedMax').value || 600),
-    showGround: document.getElementById('showGround').checked,
-    showMilitary: document.getElementById('showMilitary').checked,
-    typeFilter: clean(document.getElementById('typeFilter').value),
-    callsignPattern: clean(document.getElementById('callsignPattern').value)
-  };
-  
-  saveSettings(settings);
-  state.settings = settings;
-  
-  if (settings.mapType !== state.mapType) {
-    state.map.removeLayer(state.currentLayer);
-    state.currentLayer = mapLayers[settings.mapType];
-    state.currentLayer.addTo(state.map);
-    state.mapType = settings.mapType;
-  }
-  
-  if (state.pollTimer) clearInterval(state.pollTimer);
-  state.pollTimer = setInterval(loadAircraft, settings.updateFreq);
-  
-  renderAircraft();
-  renderSidebar();
-  
-  document.getElementById('settingsModal').classList.remove('show');
 });
 
 document.getElementById('arBtn').addEventListener('click', () => {
