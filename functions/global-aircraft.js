@@ -1,142 +1,157 @@
-// Netlify Function: Fetch global aircraft data from OpenSky Network ONLY
-// Simplified for free OpenSky tier (no ADS-B Exchange)
+"use strict";
 
-const https = require('https');
+const HEADERS = {
+  "Content-Type": "application/json; charset=utf-8",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Cache-Control": "public, max-age=8, s-maxage=8, stale-while-revalidate=20"
+};
 
-const USERNAME = process.env.OPENSKY_USERNAME;
-const PASSWORD = process.env.OPENSKY_PASSWORD;
+const memoryCache = new Map();
 
-function getOpenSkyAuth() {
-  if (!USERNAME || !PASSWORD) {
-    throw new Error('Missing OpenSky credentials');
-  }
-  const auth = Buffer.from(`${USERNAME}:${PASSWORD}`).toString('base64');
-  return `Basic ${auth}`;
+function reply(statusCode, payload) {
+  return { statusCode, headers: HEADERS, body: JSON.stringify(payload) };
 }
 
-function makeRequest(endpoint) {
-  return new Promise((resolve, reject) => {
-    const options = {
-      hostname: 'opensky-network.org',
-      path: endpoint,
-      method: 'GET',
-      headers: {
-        'Authorization': getOpenSkyAuth(),
-        'User-Agent': 'AviQuest-Flight-Tracker/1.0'
-      },
-      timeout: 12000
-    };
-
-    const request = https.request(options, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        try {
-          resolve(JSON.parse(data));
-        } catch (e) {
-          reject(new Error(`Invalid JSON: ${e.message}`));
-        }
-      });
-    });
-
-    request.on('error', reject);
-    request.on('timeout', () => {
-      request.abort();
-      reject(new Error('Request timeout'));
-    });
-    request.end();
-  });
+function finite(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
 }
 
-// Transform OpenSky state vector to standard format
-function transformAircraft(state) {
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function clean(value) {
+  return typeof value === "string" ? value.trim() : value ?? null;
+}
+
+function normaliseOpenSky(state) {
+  if (!Array.isArray(state)) return null;
+  const lat = finite(state[6]);
+  const lon = finite(state[5]);
+  if (lat === null || lon === null) return null;
+
   return {
-    hex: state[0],
-    callsign: state[1] ? state[1].trim() : null,
-    country: state[2],
-    lat: state[6],
-    lon: state[5],
-    altitude: state[7],
-    track: Number.isFinite(state[10]) ? state[10] : null,
-    speed: state[9] ? Math.round(state[9] * 1.94384) : null, // m/s to knots
-    verticalRate: state[11] ? Math.round(state[11] * 196.85) : null, // m/s to ft/min
-    squawk: state[14],
+    hex: String(state[0] || "").toLowerCase(),
+    callsign: clean(state[1]),
+    registration: null,
+    type: null,
+    description: null,
+    operator: null,
+    country: clean(state[2]),
+    lat,
+    lon,
+    altitude: finite(state[7]) === null ? 0 : Math.round(state[7] * 3.28084),
+    geoAltitude: finite(state[13]) === null ? null : Math.round(state[13] * 3.28084),
+    track: finite(state[10]),
+    speed: finite(state[9]) === null ? null : Math.round(state[9] * 1.943844),
+    verticalRate: finite(state[11]) === null ? null : Math.round(state[11] * 196.8504),
+    squawk: clean(state[14]),
     onGround: Boolean(state[8]),
-    sourceType: 'ADS-B ICAO',
-    seen: state[4],
-    geoAltitude: state[13]
+    source: "adsb",
+    sourceType: "OpenSky state vector",
+    category: finite(state[17]),
+    emergency: Boolean(state[15]) ? "alert" : null,
+    isMilitary: false,
+    seen: finite(state[4]),
+    seenPosition: null,
+    provider: "opensky"
   };
 }
 
-exports.handler = async (event) => {
+async function fetchJson(url, timeoutMs = 12000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const { limit = 1000, includeGround = false } = event.queryStringParameters || {};
-    
-    const limitNum = Math.min(Math.max(Number(limit) || 1000, 100), 3000);
-    const includeGnd = includeGround === 'true';
+    const headers = {
+      Accept: "application/json",
+      "User-Agent": "AviQuest-Georgia/4.0"
+    };
 
-    console.log(`Fetching global aircraft - limit: ${limitNum}, include ground: ${includeGnd}`);
-
-    // Fetch ALL aircraft worldwide from OpenSky Network
-    const endpoint = '/v1/states/all';
-    const states = await makeRequest(endpoint);
-    
-    if (!states || !states.states) {
-      return {
-        statusCode: 200,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          aircraft: [],
-          count: 0,
-          source: 'OpenSky Network',
-          worldwide: true,
-          timestamp: new Date().toISOString(),
-          message: 'No aircraft data available'
-        })
-      };
+    // Optional authenticated OpenSky access. Anonymous access still works,
+    // but credentials normally provide more generous request limits.
+    const clientId = process.env.OPENSKY_CLIENT_ID;
+    const clientSecret = process.env.OPENSKY_CLIENT_SECRET;
+    if (clientId && clientSecret) {
+      headers.Authorization = `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`;
+    } else if (process.env.OPENSKY_USERNAME && process.env.OPENSKY_PASSWORD) {
+      headers.Authorization = `Basic ${Buffer.from(`${process.env.OPENSKY_USERNAME}:${process.env.OPENSKY_PASSWORD}`).toString("base64")}`;
     }
 
-    // Filter and transform aircraft
-    const aircraft = (states.states || [])
-      .filter(state => state[6] !== null && state[5] !== null) // Valid lat/lon
-      .filter(state => includeGnd || !state[8]) // Filter ground aircraft if needed
-      .map(transformAircraft)
-      .sort((a, b) => {
-        // Sort by callsign quality (longer = better data)
-        return (b.callsign?.length || 0) - (a.callsign?.length || 0);
-      })
-      .slice(0, limitNum);
+    const response = await fetch(url, { headers, cache: "no-store", signal: controller.signal });
+    const text = await response.text();
+    let data;
+    try { data = JSON.parse(text); }
+    catch { throw new Error(`OpenSky returned invalid JSON (${response.status})`); }
+    if (!response.ok) throw new Error(data.message || `OpenSky HTTP ${response.status}`);
+    return data;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache, max-age=0'
-      },
-      body: JSON.stringify({
-        aircraft: aircraft,
-        count: aircraft.count || aircraft.length,
-        totalStates: states.states.length,
-        source: 'OpenSky Network',
-        worldwide: true,
-        timestamp: new Date().toISOString(),
-        stats: {
-          totalTracked: states.states.length,
-          displayed: aircraft.length,
-          coverage: 'Global (~95% worldwide)'
-        }
-      })
+function cacheKey(bounds, includeGround) {
+  const rounded = bounds.map(value => Math.round(value * 2) / 2);
+  return `${rounded.join(":")}:${includeGround ? 1 : 0}`;
+}
+
+exports.handler = async event => {
+  if (event.httpMethod === "OPTIONS") return reply(204, {});
+  if (event.httpMethod !== "GET") return reply(405, { ok: false, error: "Only GET is supported." });
+
+  const q = event.queryStringParameters || {};
+  const lamin = clamp(finite(q.lamin) ?? -90, -90, 90);
+  const lamax = clamp(finite(q.lamax) ?? 90, -90, 90);
+  const lomin = clamp(finite(q.lomin) ?? -180, -180, 180);
+  const lomax = clamp(finite(q.lomax) ?? 180, -180, 180);
+  const includeGround = q.includeGround !== "false";
+  const limit = clamp(Math.round(finite(q.limit) ?? 2500), 100, 5000);
+
+  if (lamin >= lamax || lomin >= lomax) {
+    return reply(400, { ok: false, error: "Invalid map bounds." });
+  }
+
+  const key = cacheKey([lamin, lamax, lomin, lomax], includeGround);
+  const cached = memoryCache.get(key);
+  if (cached && Date.now() - cached.savedAt < 8000) {
+    return reply(200, { ...cached.payload, cache: "memory" });
+  }
+
+  try {
+    const params = new URLSearchParams({
+      lamin: String(lamin), lamax: String(lamax),
+      lomin: String(lomin), lomax: String(lomax)
+    });
+    const data = await fetchJson(`https://opensky-network.org/api/states/all?${params}`);
+    const aircraft = (Array.isArray(data.states) ? data.states : [])
+      .map(normaliseOpenSky)
+      .filter(Boolean)
+      .filter(item => includeGround || !item.onGround)
+      .slice(0, limit);
+
+    const payload = {
+      ok: true,
+      live: true,
+      worldwide: true,
+      source: "opensky",
+      requestedAt: new Date().toISOString(),
+      bounds: { lamin, lamax, lomin, lomax },
+      total: aircraft.length,
+      aircraft
     };
+    memoryCache.set(key, { savedAt: Date.now(), payload });
+    if (memoryCache.size > 60) memoryCache.delete(memoryCache.keys().next().value);
+    return reply(200, payload);
   } catch (error) {
-    console.error('Global Aircraft Error:', error);
-    return {
-      statusCode: 500,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        error: 'Failed to fetch global aircraft data',
-        details: error.message,
-        source: 'OpenSky Network'
-      })
-    };
+    console.error("Global aircraft request failed:", error);
+    return reply(502, {
+      ok: false,
+      live: false,
+      source: "opensky",
+      error: "Worldwide aircraft data is temporarily unavailable.",
+      details: error.message
+    });
   }
 };
