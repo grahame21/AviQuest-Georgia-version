@@ -3,236 +3,596 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <meta name="theme-color" content="#06111d" />
+  <meta name="theme-color" content="#0a0e27" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>AviQuest Live Aviation</title>
+  <title>AviQuest Live Flight Tracker</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="tracker.css?v=5" />
   <style>
-    .settings-panel {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.7);
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      --bg-dark: #0a0e27;
+      --bg-card: #141829;
+      --bg-hover: #1a1f3a;
+      --line: #2a2f4a;
+      --text: #e8eef7;
+      --text-muted: #8a92a8;
+      --blue: #1e90ff;
+      --cyan: #00d4ff;
+      --green: #00ff88;
+      --orange: #ff8c00;
+      --red: #ff4757;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg-dark);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 0;
+    }
+
+    @media (max-width: 1024px) {
+      body { grid-template-columns: 1fr; }
+      .sidebar { position: fixed; left: 0; top: 0; height: 100%; z-index: 1000; width: 100%; transform: translateX(-100%); transition: transform 0.3s; }
+      .sidebar.open { transform: translateX(0); }
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      background: linear-gradient(135deg, #0a0e27 0%, #141829 100%);
+      border-right: 1px solid var(--line);
       display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 10000;
+      flex-direction: column;
+      overflow: hidden;
     }
-    .settings-panel.hidden {
-      display: none;
-    }
-    .settings-panel > div {
-      background: #0a1419;
-      border: 1px solid #1a3a4a;
-      border-radius: 16px;
-      max-width: 500px;
-      max-height: 90vh;
-      overflow-y: auto;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-      padding: 20px;
-    }
-    .settings-header {
+
+    .sidebar-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--line);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
+      gap: 8px;
     }
-    .settings-header h2 {
-      margin: 0;
-      font-size: 18px;
-      color: #fff;
+
+    .sidebar-title {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
     }
-    .close-settings {
-      width: 36px;
-      height: 36px;
-      border: 1px solid #1a3a4a;
-      background: #10283d;
-      color: #fff;
-      border-radius: 50%;
-      font-size: 24px;
-      cursor: pointer;
-    }
-    .setting-group {
-      margin-bottom: 16px;
-    }
-    .setting-group label {
-      display: block;
-      font-weight: 800;
-      color: #15d742;
+
+    .sidebar-title small {
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      color: var(--green);
+      font-weight: 900;
       text-transform: uppercase;
-      font-size: 11px;
-      margin-bottom: 8px;
     }
-    .setting-group select {
+
+    .sidebar-title h1 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .sidebar-controls {
+      display: flex;
+      gap: 6px;
+    }
+
+    .icon-btn {
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--line);
+      background: var(--bg-card);
+      color: var(--text);
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      transition: all 0.2s;
+    }
+
+    .icon-btn:hover {
+      background: var(--bg-hover);
+      border-color: var(--blue);
+    }
+
+    .search-container {
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .search-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .search-box input {
       width: 100%;
-      padding: 10px;
-      background: #0b2235;
-      border: 1px solid #1a3a4a;
-      border-radius: 8px;
-      color: #fff;
+      background: var(--bg-card);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px 12px 8px 28px;
+      color: var(--text);
       font-size: 13px;
     }
-    .settings-actions {
+
+    .search-box input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 8px;
+      color: var(--blue);
+      font-size: 14px;
+    }
+
+    .filters {
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+    }
+
+    .filter-btn {
+      padding: 6px 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      color: var(--text-muted);
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .filter-btn.active {
+      background: var(--blue);
+      border-color: var(--blue);
+      color: white;
+    }
+
+    .filter-btn:hover {
+      border-color: var(--blue);
+    }
+
+    .aircraft-list-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .aircraft-item {
+      padding: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .aircraft-item:hover {
+      background: var(--bg-hover);
+      border-color: var(--blue);
+    }
+
+    .aircraft-item.selected {
+      background: var(--bg-hover);
+      border-color: var(--cyan);
+      box-shadow: 0 0 12px rgba(0, 212, 255, 0.2);
+    }
+
+    .aircraft-callsign {
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--cyan);
+      margin-bottom: 4px;
+    }
+
+    .aircraft-details {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-top: 20px;
+      gap: 6px;
+      font-size: 11px;
     }
-    .settings-actions button {
-      padding: 10px 16px;
-      border: 1px solid #1a3a4a;
+
+    .detail-line {
+      color: var(--text-muted);
+    }
+
+    .detail-value {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .aircraft-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 700;
+      margin-top: 6px;
+    }
+
+    .badge-civil {
+      background: rgba(30, 144, 255, 0.2);
+      color: var(--blue);
+    }
+
+    .badge-military {
+      background: rgba(255, 140, 0, 0.2);
+      color: var(--orange);
+    }
+
+    .status-bar {
+      padding: 8px 12px;
+      border-top: 1px solid var(--line);
+      background: var(--bg-card);
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .live-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* MAP */
+    .map-container {
+      position: relative;
+      background: #0f1525;
+    }
+
+    #map {
+      height: 100%;
+      width: 100%;
+    }
+
+    .leaflet-control-zoom {
+      border: 1px solid var(--line) !important;
+    }
+
+    .leaflet-control-zoom-in, .leaflet-control-zoom-out {
+      background: var(--bg-card) !important;
+      color: var(--text) !important;
+      border: 1px solid var(--line) !important;
+      width: 32px !important;
+      height: 32px !important;
+      line-height: 32px !important;
+      font-size: 16px !important;
+    }
+
+    .leaflet-control-zoom-in:hover, .leaflet-control-zoom-out:hover {
+      background: var(--bg-hover) !important;
+    }
+
+    /* AIRCRAFT MARKERS */
+    .aircraft-marker {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.5));
+    }
+
+    .aircraft-marker.civil {
+      filter: drop-shadow(0 0 6px rgba(30, 144, 255, 0.6));
+    }
+
+    .aircraft-marker.military {
+      filter: drop-shadow(0 0 6px rgba(255, 140, 0, 0.6));
+    }
+
+    .aircraft-marker.selected {
+      font-size: 20px;
+      filter: drop-shadow(0 0 10px rgba(0, 212, 255, 0.8));
+    }
+
+    /* INFO PANEL */
+    .info-panel {
+      position: absolute;
+      bottom: 16px;
+      right: 16px;
+      background: rgba(20, 24, 41, 0.95);
+      border: 1px solid var(--line);
       border-radius: 8px;
-      font-weight: 800;
+      padding: 12px;
+      max-width: 280px;
+      backdrop-filter: blur(10px);
+      display: none;
+      z-index: 500;
+    }
+
+    .info-panel.visible {
+      display: block;
+    }
+
+    .info-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .info-title {
+      font-weight: 700;
+      color: var(--cyan);
+    }
+
+    .close-info {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
       cursor: pointer;
+      font-size: 16px;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      font-size: 11px;
+    }
+
+    .info-item {
+      background: var(--bg-card);
+      padding: 6px;
+      border-radius: 4px;
+      border: 1px solid var(--line);
+    }
+
+    .info-label {
+      color: var(--text-muted);
+      font-size: 10px;
+      margin-bottom: 2px;
+    }
+
+    .info-value {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* SETTINGS PANEL */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+
+    .modal-overlay.show {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--bg-dark);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 20px;
+      max-width: 400px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+
+    .modal-section {
+      margin-bottom: 16px;
+    }
+
+    .modal-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .modal-select, .modal-input {
+      width: 100%;
+      padding: 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--text);
       font-size: 13px;
     }
-    .settings-actions .primary {
-      background: #1597e5;
-      color: #fff;
-      border-color: #1597e5;
+
+    .modal-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 16px;
     }
-    .settings-actions .secondary {
+
+    .modal-btn {
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+
+    .modal-btn.primary {
+      background: var(--blue);
+      color: white;
+      border-color: var(--blue);
+    }
+
+    .modal-btn.primary:hover {
+      background: #1574dd;
+    }
+
+    .modal-btn.secondary {
       background: transparent;
-      color: #888;
+      color: var(--text-muted);
+    }
+
+    .modal-btn.secondary:hover {
+      background: var(--bg-hover);
+    }
+
+    @media (max-width: 768px) {
+      .info-panel {
+        max-width: calc(100% - 32px);
+        right: 16px;
+      }
     }
   </style>
 </head>
 <body>
-  <header class="tracker-header">
-    <button id="backBtn" class="round-button" type="button" aria-label="Back to AviQuest">‹</button>
-    <div><small>GG'S ADVENTURE</small><h1>Live Aviation</h1></div>
-    <div class="header-actions">
-      <button id="settingsBtn" class="round-button" type="button" aria-label="Settings">⚙</button>
-      <button id="refreshBtn" class="round-button" type="button" aria-label="Refresh aircraft">↻</button>
-    </div>
-  </header>
-
-  <nav class="mode-tabs" aria-label="Live aviation mode">
-    <button class="active" type="button">Flight Tracker</button>
-    <button id="topArBtn" type="button">AR Spotter</button>
-  </nav>
-
-  <section class="search-panel">
-    <label class="search-box">
-      <span class="search-icon">⌕</span>
-      <input id="searchInput" type="search" autocomplete="off"
-        placeholder="Flight, registration, operator or aircraft" />
-      <button id="locateBtn" class="search-action" type="button" aria-label="My location" title="My location">◎</button>
-      <button id="favouritesBtn" class="search-action" type="button" aria-label="Favourites" title="Favourites">★<i id="favouriteCount">0</i></button>
-      <button id="savedBtn" class="search-action" type="button" aria-label="Saved" title="Saved">▣<i id="savedCount">0</i></button>
-      <button id="clearSearch" class="search-action clear-action" type="button" aria-label="Clear search">×</button>
-    </label>
-
-    <div class="traffic-filters" role="group" aria-label="Aircraft category">
-      <button id="trafficAll" class="traffic-filter active" type="button" data-traffic-filter="all">
-        All <span id="allTrafficCount">0</span>
-      </button>
-      <button id="trafficCivil" class="traffic-filter" type="button" data-traffic-filter="civil">
-        Civil <span id="civilTrafficCount">0</span>
-      </button>
-      <button id="trafficMilitary" class="traffic-filter military-filter" type="button" data-traffic-filter="military">
-        Military <span id="militaryTrafficCount">0</span>
-      </button>
-    </div>
-  </section>
-
-  <main>
-    <div id="map" aria-label="Live civil and military aircraft map"></div>
-
-    <div class="status-pill">
-      <span id="liveDot" class="live-dot"></span>
-      <b id="statusText">Loading aircraft…</b>
-      <span id="aircraftCount">0</span>
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-title">
+        <small>GG's Adventure</small>
+        <h1>Flight Tracker</h1>
+      </div>
+      <div class="sidebar-controls">
+        <button class="icon-btn" id="settingsBtn" title="Settings">⚙</button>
+        <button class="icon-btn" id="toggleBtn" title="Toggle sidebar" style="display: none;">☰</button>
+      </div>
     </div>
 
-    <button id="listToggle" class="list-toggle" type="button">
-      Nearby <span id="listCount">0</span>
-    </button>
-
-    <aside id="aircraftList" class="aircraft-list" aria-label="Nearby aircraft"></aside>
-
-    <section id="detailsPanel" class="details-panel hidden" aria-live="polite">
-      <button id="closeDetails" class="close-button" type="button" aria-label="Close details">×</button>
-      <div class="details-top">
-        <img id="aircraftPhoto" src="images/aircraft-placeholder.svg" alt="Aircraft preview" />
-        <div>
-          <small id="detailStatus">LIVE CIVIL</small>
-          <h2 id="detailCallsign">Aircraft</h2>
-          <p id="detailReg">Registration unavailable</p>
-        </div>
+    <div class="search-container">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input id="searchInput" type="text" placeholder="Search callsign, registration...">
       </div>
-      <div class="detail-actions favourite-actions">
-        <button id="saveFavourite" type="button">☆ Favourite</button>
-        <button id="saveItem" type="button">▣ Save</button>
-      </div>
-      <div class="detail-grid">
-        <div><small>Aircraft</small><b id="detailType">Unknown</b></div>
-        <div><small>Operator</small><b id="detailOperator">Unknown</b></div>
-        <div><small>Category</small><b id="detailClass">Civil</b></div>
-        <div><small>Distance</small><b id="detailDistance">—</b></div>
-        <div><small>Altitude</small><b id="detailAltitude">—</b></div>
-        <div><small>Speed</small><b id="detailSpeed">—</b></div>
-        <div><small>Heading</small><b id="detailHeading">—</b></div>
-        <div><small>Vertical rate</small><b id="detailVerticalRate">—</b></div>
-        <div><small>Squawk</small><b id="detailSquawk">—</b></div>
-        <div><small>Position source</small><b id="detailSource">—</b></div>
-        <div><small>Updated</small><b id="detailSeen">—</b></div>
-      </div>
-      <p class="military-note" id="militaryNote" hidden>
-        Military identification is based on the live source's aircraft database flag. Some defence aircraft may be hidden, blocked, untagged or not transmitting.
-      </p>
-      <div class="detail-actions">
-        <button id="centreAircraft" type="button">Centre</button>
-        <button id="openAr" class="primary" type="button">Open in AR</button>
-      </div>
-    </section>
+    </div>
 
-    <!-- Settings Panel - INLINE -->
-    <div id="settingsPanel" class="settings-panel hidden">
-      <div>
-        <div class="settings-header">
-          <h2>Flight Tracker Settings</h2>
-          <button class="close-settings" id="closeSettingsBtn" type="button">×</button>
-        </div>
-        
-        <div class="setting-group">
-          <label for="updateFreqSelect">Update Frequency</label>
-          <select id="updateFreqSelect">
-            <option value="1000">Every 1 second</option>
-            <option value="5000" selected>Every 5 seconds</option>
-            <option value="10000">Every 10 seconds</option>
-            <option value="30000">Every 30 seconds</option>
-            <option value="60000">Every 1 minute</option>
-          </select>
-        </div>
+    <div class="filters">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="civil">Civil</button>
+      <button class="filter-btn" data-filter="military">Military</button>
+    </div>
 
-        <div class="setting-group">
-          <label for="weatherSourceSelect">Weather Source (Australia)</label>
-          <select id="weatherSourceSelect">
-            <option value="bom" selected>Bureau of Meteorology - Most Accurate</option>
-            <option value="openweather">OpenWeatherMap - Worldwide</option>
-          </select>
-        </div>
+    <div class="aircraft-list-container" id="aircraftList"></div>
 
-        <div class="settings-actions">
-          <button type="button" id="resetSettingsBtn" class="secondary">Reset</button>
-          <button type="button" id="saveSettingsBtn" class="primary">Save</button>
+    <div class="status-bar">
+      <div class="live-indicator">
+        <span class="live-dot"></span>
+        <span id="statusText">Loading...</span>
+      </div>
+      <span id="aircraftCount">0 aircraft</span>
+    </div>
+  </div>
+
+  <!-- MAP -->
+  <div class="map-container">
+    <div id="map"></div>
+    
+    <div class="info-panel" id="infoPanel">
+      <div class="info-header">
+        <div class="info-title" id="infoCallsign">AIRCRAFT</div>
+        <button class="close-info" onclick="document.getElementById('infoPanel').classList.remove('visible')">✕</button>
+      </div>
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-label">Altitude</div>
+          <div class="info-value" id="infoAltitude">—</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Speed</div>
+          <div class="info-value" id="infoSpeed">—</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Registration</div>
+          <div class="info-value" id="infoReg">—</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Heading</div>
+          <div class="info-value" id="infoHeading">—</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Distance</div>
+          <div class="info-value" id="infoDistance">—</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Operator</div>
+          <div class="info-value" id="infoOperator">—</div>
         </div>
       </div>
     </div>
-  </main>
+  </div>
 
-  <button id="navA7" class="a7-fab" type="button" aria-label="Find A7-BAF">★ A7-BAF</button>
+  <!-- SETTINGS MODAL -->
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal">
+      <div class="modal-title">Settings</div>
+      
+      <div class="modal-section">
+        <label class="modal-label">Update Frequency</label>
+        <select class="modal-select" id="updateFreq">
+          <option value="1000">Every 1 second</option>
+          <option value="5000" selected>Every 5 seconds</option>
+          <option value="10000">Every 10 seconds</option>
+          <option value="30000">Every 30 seconds</option>
+        </select>
+      </div>
 
-  <span id="navNearby" hidden></span>
-  <span id="navAr" hidden></span>
-  <span id="navHome" hidden></span>
+      <div class="modal-section">
+        <label class="modal-label">Weather Source</label>
+        <select class="modal-select" id="weatherSource">
+          <option value="bom" selected>Bureau of Meteorology</option>
+          <option value="openweather">OpenWeatherMap</option>
+        </select>
+      </div>
+
+      <div class="modal-buttons">
+        <button class="modal-btn secondary" onclick="document.getElementById('settingsModal').classList.remove('show')">Close</button>
+        <button class="modal-btn primary" id="saveSettings">Save</button>
+      </div>
+    </div>
+  </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="tracker.js?v=6"></script>
+  <script src="tracker.js?v=7"></script>
 </body>
 </html>
