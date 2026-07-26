@@ -1,6 +1,9 @@
 'use strict';
 
-const POLL_MS = 5000;
+const NEARBY_POLL_MS = 5000;
+const WORLD_POLL_MS = 15000;
+const WORLD_ZOOM_THRESHOLD = 7;
+const MOVE_DEBOUNCE_MS = 650;
 
 const DEFAULT_TRACKER_SETTINGS = {
   mapType: 'standard',
@@ -38,6 +41,10 @@ let state = {
   selected: null,
   user: null,
   pollTimer: null,
+  moveTimer: null,
+  requestController: null,
+  lastRequestKey: '',
+  dataMode: 'nearby',
   mapType: 'standard',
   settings: loadSettings()
 };
@@ -95,8 +102,9 @@ function initMap() {
     renderSidebar();
   });
 
+  state.map.on('moveend zoomend', scheduleMapAircraftLoad);
   getLocation();
-  state.pollTimer = setInterval(loadAircraft, POLL_MS);
+  schedulePolling();
 }
 
 function getLocation() {
@@ -148,26 +156,102 @@ function updateUserMarker() {
   }
 }
 
+function schedulePolling() {
+  clearInterval(state.pollTimer);
+  const interval = state.map && state.map.getZoom() < WORLD_ZOOM_THRESHOLD
+    ? WORLD_POLL_MS
+    : NEARBY_POLL_MS;
+  state.pollTimer = setInterval(() => loadAircraft(false), interval);
+}
+
+function scheduleMapAircraftLoad() {
+  clearTimeout(state.moveTimer);
+  state.moveTimer = setTimeout(() => {
+    schedulePolling();
+    loadAircraft(true);
+  }, MOVE_DEBOUNCE_MS);
+}
+
+function getWorldwideBounds() {
+  const bounds = state.map.getBounds();
+  const south = Math.max(-89.5, bounds.getSouth());
+  const north = Math.min(89.5, bounds.getNorth());
+  let west = bounds.getWest();
+  let east = bounds.getEast();
+
+  // Leaflet may return coordinates outside the normal range after world wrapping.
+  while (west < -180) { west += 360; east += 360; }
+  while (west > 180) { west -= 360; east -= 360; }
+
+  // A viewport crossing the date line cannot be represented as one OpenSky box.
+  // Use the largest visible side; loading again after a small pan gets the other side.
+  if (east > 180) east = 180;
+  if (east - west > 350) { west = -180; east = 180; }
+
+  return { lamin: south, lamax: north, lomin: Math.max(-180, west), lomax: Math.min(180, east) };
+}
+
 async function loadAircraft(force = false) {
+  if (!state.map) return;
+
+  const zoom = state.map.getZoom();
+  const worldwide = zoom < WORLD_ZOOM_THRESHOLD;
+  const center = state.map.getCenter();
+  let url;
+  let requestKey;
+
+  if (worldwide) {
+    const b = getWorldwideBounds();
+    requestKey = `world:${zoom}:${b.lamin.toFixed(2)}:${b.lamax.toFixed(2)}:${b.lomin.toFixed(2)}:${b.lomax.toFixed(2)}`;
+    const params = new URLSearchParams({
+      lamin: b.lamin.toFixed(4), lamax: b.lamax.toFixed(4),
+      lomin: b.lomin.toFixed(4), lomax: b.lomax.toFixed(4),
+      includeGround: state.settings.traffic_ground === false ? 'false' : 'true',
+      limit: zoom <= 3 ? '3500' : '2500'
+    });
+    url = `/.netlify/functions/global-aircraft?${params}`;
+    state.dataMode = 'worldwide';
+  } else {
+    requestKey = `near:${center.lat.toFixed(2)}:${center.lng.toFixed(2)}:${zoom}`;
+    url = `/.netlify/functions/nearby-aircraft?lat=${center.lat.toFixed(5)}&lon=${center.lng.toFixed(5)}&radius=250`;
+    state.dataMode = 'nearby';
+  }
+
+  if (!force && requestKey === state.lastRequestKey && state.aircraft.length) return;
+  state.lastRequestKey = requestKey;
+
+  if (state.requestController) state.requestController.abort();
+  state.requestController = new AbortController();
+
   try {
-    const center = state.map.getCenter();
-    const url = `/.netlify/functions/nearby-aircraft?lat=${center.lat}&lon=${center.lng}&radius=250&_=${Date.now()}`;
-    
-    const response = await fetch(url);
+    const response = await fetch(`${url}&_=${Date.now()}`, {
+      cache: 'no-store',
+      headers: { Accept: 'application/json' },
+      signal: state.requestController.signal
+    });
     const data = await response.json();
-    
-    if (!response.ok) throw new Error([data.error, ...(data.details || [])].filter(Boolean).join(' | ') || 'Failed to load aircraft');
-    
-    state.aircraft = data.aircraft || [];
+    if (!response.ok) throw new Error([data.error, data.details].filter(Boolean).join(' | ') || 'Failed to load aircraft');
+
+    state.aircraft = Array.isArray(data.aircraft) ? data.aircraft : [];
     renderAircraft();
     renderSidebar();
+    updateCoverageStatus(data);
   } catch (error) {
+    if (error.name === 'AbortError') return;
     console.error('Error loading aircraft:', error);
     const list = document.getElementById('aircraftList');
     if (list && state.aircraft.length === 0) {
       list.innerHTML = `<div style="padding:16px;text-align:center;color:#c62828;line-height:1.45"><strong>Live aircraft unavailable</strong><br><small>${String(error.message || error)}</small></div>`;
     }
   }
+}
+
+function updateCoverageStatus(data) {
+  const count = Array.isArray(data.aircraft) ? data.aircraft.length : 0;
+  const mode = state.dataMode === 'worldwide' ? 'Worldwide visible area' : 'Detailed local ADS-B';
+  const provider = data.source || data.provider || 'live data';
+  const status = document.getElementById('coverageStatus');
+  if (status) status.textContent = `${mode} • ${count.toLocaleString()} aircraft • ${provider}`;
 }
 
 function renderAircraft() {
