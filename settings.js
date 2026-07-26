@@ -1,6 +1,18 @@
 'use strict';
 
 // Settings Controller
+const DEFAULT_SETTINGS = {
+  mapType: 'standard', mapBrightness: 100,
+  terminator: false, oceanic: false, airports: true, myLocation: true,
+  source_adsb: true, source_mlat: true, source_sbadsb: true, source_adsc: true,
+  source_asde: true, source_uat: true, source_auradra: true, source_spider: true, source_ogn: true,
+  traffic_airborne: true, traffic_ground: true, traffic_heli: true, traffic_military: true,
+  traffic_biz: true, traffic_gen: true, traffic_cargo: true, traffic_glider: true,
+  traffic_drone: true, traffic_balloon: true, traffic_atveh: true,
+  labels: 'text', altitudeUnit: 'ft', speedUnit: 'kt', distanceUnit: 'km',
+  photos: true, liveActivities: true, analytics: true, crash: true, performance: true
+};
+
 class SettingsController {
   constructor() {
     this.settings = this.loadSettings();
@@ -20,9 +32,9 @@ class SettingsController {
 
   loadSettings() {
     try {
-      return JSON.parse(localStorage.getItem('aviquest_settings') || '{}');
+      return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem('aviquest_settings') || '{}') };
     } catch {
-      return {};
+      return { ...DEFAULT_SETTINGS };
     }
   }
 
@@ -33,7 +45,7 @@ class SettingsController {
 
   applySettings() {
     // Map brightness
-    const brightness = this.settings.mapBrightness || 100;
+    const brightness = Number(this.settings.mapBrightness ?? 100);
     const mapEl = document.getElementById('map');
     mapEl.style.filter = `brightness(${brightness}%)`;
 
@@ -75,7 +87,7 @@ class SettingsController {
         contents.forEach(c => c.classList.remove('active'));
         
         tab.classList.add('active');
-        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+        document.querySelector(`.settings-tab-content[data-tab="${tabName}"]`)?.classList.add('active');
       });
     });
   }
@@ -88,6 +100,7 @@ class SettingsController {
         mapCards.forEach(c => c.classList.remove('active'));
         card.classList.add('active');
         this.settings.mapType = card.dataset.map;
+        this.saveSettings();
       });
     });
   }
@@ -111,6 +124,7 @@ class SettingsController {
         const key = this.getToggleKey(toggle);
         if (key) {
           this.settings[key] = toggle.classList.contains('active');
+          this.saveSettings();
         }
       });
     });
@@ -127,7 +141,7 @@ class SettingsController {
     const sliders = document.querySelectorAll('.settings-slider');
     
     sliders.forEach(slider => {
-      const key = slider.id.replace('Slider', '');
+      const key = slider.id === 'brightnesSlider' ? 'mapBrightness' : slider.id.replace('Slider', '');
       if (this.settings[key] !== undefined) {
         slider.value = this.settings[key];
       }
@@ -135,10 +149,11 @@ class SettingsController {
       slider.addEventListener('input', (e) => {
         this.settings[key] = e.target.value;
         // Apply brightness in real-time
-        if (key === 'brightnes') {
+        if (key === 'mapBrightness') {
           const mapEl = document.getElementById('map');
           mapEl.style.filter = `brightness(${e.target.value}%)`;
         }
+        this.saveSettings();
       });
     });
   }
@@ -154,6 +169,7 @@ class SettingsController {
 
       select.addEventListener('change', (e) => {
         this.settings[key] = e.target.value;
+        this.saveSettings();
       });
     });
   }
@@ -175,7 +191,7 @@ class SettingsController {
 
     resetBtn.addEventListener('click', () => {
       if (confirm('Reset all settings to defaults?')) {
-        this.settings = {};
+        this.settings = { ...DEFAULT_SETTINGS };
         localStorage.removeItem('aviquest_settings');
         location.reload();
       }
@@ -193,7 +209,7 @@ class SettingsController {
     }
 
     // Brightness
-    if (this.settings.mapBrightness) {
+    if (this.settings.mapBrightness !== undefined) {
       document.getElementById('brightnesSlider').value = this.settings.mapBrightness;
       const mapEl = document.getElementById('map');
       mapEl.style.filter = `brightness(${this.settings.mapBrightness}%)`;

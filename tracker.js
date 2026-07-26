@@ -1,6 +1,36 @@
 'use strict';
 
 const POLL_MS = 5000;
+
+const DEFAULT_TRACKER_SETTINGS = {
+  mapType: 'standard',
+  mapBrightness: 100,
+  source_adsb: true,
+  source_mlat: true,
+  source_sbadsb: true,
+  source_adsc: true,
+  source_asde: true,
+  source_uat: true,
+  source_auradra: true,
+  source_spider: true,
+  source_ogn: true,
+  traffic_airborne: true,
+  traffic_ground: true,
+  traffic_heli: true,
+  traffic_military: true,
+  traffic_biz: true,
+  traffic_gen: true,
+  traffic_cargo: true,
+  traffic_glider: true,
+  traffic_drone: true,
+  traffic_balloon: true,
+  traffic_atveh: true,
+  labels: 'text',
+  altitudeUnit: 'ft',
+  speedUnit: 'kt',
+  distanceUnit: 'km'
+};
+
 let state = {
   map: null,
   aircraft: [],
@@ -29,7 +59,7 @@ const mapLayers = {
 
 function loadSettings() {
   try {
-    return JSON.parse(localStorage.getItem('aviquest_settings') || '{}');
+    return { ...DEFAULT_TRACKER_SETTINGS, ...JSON.parse(localStorage.getItem('aviquest_settings') || '{}') };
   } catch {
     return {};
   }
@@ -48,7 +78,8 @@ function initMap() {
 
   // Listen for settings changes
   window.addEventListener('settingsChanged', (e) => {
-    const settings = e.detail;
+    const settings = { ...DEFAULT_TRACKER_SETTINGS, ...(e.detail || {}) };
+    state.settings = settings;
     
     // Handle map type change
     if (settings.mapType && settings.mapType !== state.mapType) {
@@ -57,6 +88,11 @@ function initMap() {
       state.currentLayer.addTo(state.map);
       state.mapType = settings.mapType;
     }
+
+    const brightness = Number(settings.mapBrightness ?? 100);
+    document.getElementById('map').style.filter = `brightness(${brightness}%)`;
+    renderAircraft();
+    renderSidebar();
   });
 
   getLocation();
@@ -95,18 +131,22 @@ function updateUserMarker() {
 async function loadAircraft(force = false) {
   try {
     const center = state.map.getCenter();
-    const url = `/.netlify/functions/nearby-aircraft?lat=${center.lat}&lon=${center.lng}&radius=150&_=${Date.now()}`;
+    const url = `/.netlify/functions/nearby-aircraft?lat=${center.lat}&lon=${center.lng}&radius=250&_=${Date.now()}`;
     
     const response = await fetch(url);
     const data = await response.json();
     
-    if (!response.ok) throw new Error(data.error || 'Failed to load aircraft');
+    if (!response.ok) throw new Error([data.error, ...(data.details || [])].filter(Boolean).join(' | ') || 'Failed to load aircraft');
     
     state.aircraft = data.aircraft || [];
     renderAircraft();
     renderSidebar();
   } catch (error) {
     console.error('Error loading aircraft:', error);
+    const list = document.getElementById('aircraftList');
+    if (list && state.aircraft.length === 0) {
+      list.innerHTML = `<div style="padding:16px;text-align:center;color:#c62828;line-height:1.45"><strong>Live aircraft unavailable</strong><br><small>${String(error.message || error)}</small></div>`;
+    }
   }
 }
 
@@ -220,14 +260,14 @@ function filterAircraft() {
     const isHeli = clean(a.type).toUpperCase().includes('H');
     const isMilitary = clean(a.callsign).toUpperCase().match(/MIL|USAF|NAVY|ARMY|COAST|RAF|RAAF/);
     
-    if (isAirborne && !state.settings.traffic_airborne) return false;
-    if (isGround && !state.settings.traffic_ground) return false;
-    if (isHeli && !state.settings.traffic_heli) return false;
-    if (isMilitary && !state.settings.traffic_military) return false;
+    if (isAirborne && state.settings.traffic_airborne === false) return false;
+    if (isGround && state.settings.traffic_ground === false) return false;
+    if (isHeli && state.settings.traffic_heli === false) return false;
+    if (isMilitary && state.settings.traffic_military === false) return false;
     
     // Data source filters
-    if (!state.settings.source_adsb && a.source === 'adsb') return false;
-    if (!state.settings.source_mlat && a.source === 'mlat') return false;
+    if (state.settings.source_adsb === false && (a.source === 'adsb' || /ADS-B/i.test(a.sourceType || ''))) return false;
+    if (state.settings.source_mlat === false && (a.source === 'mlat' || /MLAT/i.test(a.sourceType || ''))) return false;
     
     // Search filter
     if (query) {
