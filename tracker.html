@@ -30,7 +30,7 @@
     .top-bar {
       grid-row: 1;
       grid-column: 1;
-      background: rgba(0, 0, 0, 0.3);
+      background: transparent;
       backdrop-filter: blur(10px);
       padding: 8px 12px;
       z-index: 100;
@@ -82,7 +82,7 @@
     .bottom-bar {
       grid-row: 3;
       grid-column: 1;
-      background: rgba(0, 0, 0, 0.3);
+      background: transparent;
       backdrop-filter: blur(10px);
       padding: 12px;
       z-index: 100;
@@ -316,6 +316,12 @@
 
     .modal-section {
       margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .modal-section:last-of-type {
+      border-bottom: none;
     }
 
     .modal-label {
@@ -325,14 +331,49 @@
       letter-spacing: 0.5px;
       margin-bottom: 8px;
       display: block;
+      font-weight: 600;
     }
 
-    .modal-select {
+    .modal-select,
+    .modal-input {
       width: 100%;
       padding: 10px;
       border: 1px solid #ddd;
       border-radius: 8px;
       font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    .modal-input {
+      font-family: monospace;
+    }
+
+    .range-inputs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .range-inputs input {
+      width: 100%;
+    }
+
+    .toggle-group {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .toggle-checkbox {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+    }
+
+    .toggle-label {
+      font-size: 14px;
+      cursor: pointer;
+      flex: 1;
     }
 
     .modal-buttons {
@@ -428,7 +469,6 @@
     <button class="control-btn" id="favBtn" title="Favorites">♥</button>
     <button class="control-btn" id="listBtn" title="List">≡</button>
     <button class="control-btn ar" id="arBtn" title="AR Spotter">AR</button>
-    <button class="control-btn" id="volumeBtn" title="Volume">🔊</button>
     <button class="control-btn" id="compassBtn" title="Compass">🧭</button>
     <button class="control-btn" id="layersBtn" title="Layers">◫</button>
   </div>
@@ -450,6 +490,16 @@
     <div class="modal">
       <div class="modal-title">Settings</div>
       
+      <!-- MAP TYPE -->
+      <div class="modal-section">
+        <label class="modal-label">Map Type</label>
+        <select class="modal-select" id="mapType">
+          <option value="apple" selected>Apple Maps</option>
+          <option value="google">Google Maps</option>
+        </select>
+      </div>
+
+      <!-- UPDATE FREQUENCY -->
       <div class="modal-section">
         <label class="modal-label">Update Frequency</label>
         <select class="modal-select" id="updateFreq">
@@ -460,14 +510,50 @@
         </select>
       </div>
 
+      <!-- ALTITUDE FILTER -->
       <div class="modal-section">
-        <label class="modal-label">Map Type</label>
-        <select class="modal-select" id="mapType">
-          <option value="apple" selected>Apple Maps</option>
-          <option value="google">Google Maps</option>
-        </select>
+        <label class="modal-label">Altitude Filter (ft)</label>
+        <div class="range-inputs">
+          <input type="number" id="altMin" class="modal-input" placeholder="Min" value="0">
+          <input type="number" id="altMax" class="modal-input" placeholder="Max" value="50000">
+        </div>
       </div>
 
+      <!-- SPEED FILTER -->
+      <div class="modal-section">
+        <label class="modal-label">Speed Filter (kt)</label>
+        <div class="range-inputs">
+          <input type="number" id="speedMin" class="modal-input" placeholder="Min" value="0">
+          <input type="number" id="speedMax" class="modal-input" placeholder="Max" value="600">
+        </div>
+      </div>
+
+      <!-- SHOW GROUND AIRCRAFT -->
+      <div class="modal-section">
+        <label class="modal-label">Display Options</label>
+        <div class="toggle-group">
+          <input type="checkbox" id="showGround" class="toggle-checkbox" checked>
+          <label for="showGround" class="toggle-label">Show Ground Aircraft</label>
+        </div>
+        <div class="toggle-group">
+          <input type="checkbox" id="showMilitary" class="toggle-checkbox" checked>
+          <label for="showMilitary" class="toggle-label">Show Military</label>
+        </div>
+      </div>
+
+      <!-- AIRCRAFT TYPE FILTER -->
+      <div class="modal-section">
+        <label class="modal-label">Aircraft Type Filter</label>
+        <input type="text" id="typeFilter" class="modal-input" placeholder="e.g., B777, A380, C172">
+      </div>
+
+      <!-- CALLSIGN PATTERN -->
+      <div class="modal-section">
+        <label class="modal-label">Callsign Pattern</label>
+        <input type="text" id="callsignPattern" class="modal-input" placeholder="e.g., QF*, UAE* (use * as wildcard)">
+      </div>
+
+      <!-- BUTTONS -->
       <div class="modal-buttons">
         <button class="modal-btn secondary" onclick="document.getElementById('settingsModal').classList.remove('show')">Close</button>
         <button class="modal-btn primary" id="saveSettings">Save</button>
@@ -476,6 +562,6 @@
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="tracker.js?v=13"></script>
+  <script src="tracker.js?v=14"></script>
 </body>
 </html>
