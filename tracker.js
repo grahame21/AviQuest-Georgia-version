@@ -8,8 +8,23 @@ let state = {
   selected: null,
   user: null,
   pollTimer: null,
-  filter: 'all',
+  mapType: 'satellite',
   settings: loadSettings()
+};
+
+const mapLayers = {
+  satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 18,
+    attribution: '© Esri'
+  }),
+  terrain: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+    maxZoom: 17,
+    attribution: '© OpenStreetMap'
+  }),
+  street: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap'
+  })
 };
 
 function loadSettings() {
@@ -25,12 +40,14 @@ function saveSettings(settings) {
 }
 
 function initMap() {
-  state.map = L.map('map').setView([-25, 134], 4);
+  state.map = L.map('map', {
+    zoomControl: true,
+    preferCanvas: true
+  }).setView([-25, 134], 4);
   
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '© OpenStreetMap'
-  }).addTo(state.map);
+  // Add satellite layer by default
+  mapLayers.satellite.addTo(state.map);
+  state.currentLayer = mapLayers.satellite;
 
   getLocation();
   loadAircraft();
@@ -55,13 +72,13 @@ function updateUserMarker() {
     state.userMarker.setLatLng([state.user.lat, state.user.lon]);
   } else {
     state.userMarker = L.circleMarker([state.user.lat, state.user.lon], {
-      radius: 6,
-      fillColor: '#1e90ff',
+      radius: 8,
+      fillColor: '#0066ff',
       color: '#fff',
       weight: 2,
       opacity: 1,
-      fillOpacity: 0.8
-    }).addTo(state.map).bindTooltip('Your location');
+      fillOpacity: 0.9
+    }).addTo(state.map).bindTooltip('Your location', { permanent: false });
   }
 }
 
@@ -77,47 +94,16 @@ async function loadAircraft(force = false) {
     
     state.aircraft = data.aircraft || [];
     renderAircraft();
-    updateStats();
-    updateStatus(true);
+    renderSidebar();
   } catch (error) {
-    updateStatus(false, error.message);
+    console.error(error);
   }
 }
 
 function renderAircraft() {
   const filtered = filterAircraft();
-  const list = document.getElementById('aircraftList');
-  list.innerHTML = '';
   
-  filtered.slice(0, 100).forEach(aircraft => {
-    const item = document.createElement('div');
-    item.className = 'aircraft-item';
-    item.dataset.hex = aircraft.hex;
-    
-    const callsign = clean(aircraft.callsign) || clean(aircraft.registration) || aircraft.hex.toUpperCase();
-    const reg = clean(aircraft.registration) || '—';
-    const type = clean(aircraft.type) || 'Unknown';
-    const isMilitary = aircraft.isMilitary;
-    
-    const distance = state.user ? 
-      calculateDistance(state.user.lat, state.user.lon, aircraft.lat, aircraft.lon) : null;
-    
-    item.innerHTML = `
-      <div class="aircraft-callsign">${callsign}</div>
-      <div class="aircraft-details">
-        <div class="detail-line"><span class="detail-value">${reg}</span></div>
-        <div class="detail-line">${formatAlt(aircraft.altitude)} / ${formatSpeed(aircraft.speed)}</div>
-        <div class="detail-line">${type}</div>
-        <div class="detail-line">${distance ? distance.toFixed(1) + ' km' : 'N/A'}</div>
-      </div>
-      <span class="aircraft-badge ${isMilitary ? 'badge-military' : 'badge-civil'}">
-        ${isMilitary ? 'MILITARY' : 'CIVIL'}
-      </span>
-    `;
-    
-    item.addEventListener('click', () => selectAircraft(aircraft, item));
-    list.appendChild(item);
-    
+  filtered.forEach(aircraft => {
     renderMarker(aircraft);
   });
   
@@ -132,44 +118,81 @@ function renderAircraft() {
 
 function renderMarker(aircraft) {
   const key = aircraft.hex;
-  const isMilitary = aircraft.isMilitary;
+  const rotation = Number.isFinite(Number(aircraft.track)) ? Number(aircraft.track) : 0;
   
   if (state.markers.has(key)) {
     state.markers.get(key).setLatLng([aircraft.lat, aircraft.lon]);
   } else {
     const icon = L.divIcon({
-      className: 'aircraft-marker ' + (isMilitary ? 'military' : 'civil'),
-      html: '✈',
-      iconSize: [28, 28]
+      className: 'aircraft-marker',
+      html: `<div style="transform: rotate(${rotation}deg); font-size: 24px;">✈</div>`,
+      iconSize: [24, 24],
+      iconAnchor: [12, 12]
     });
     
     const marker = L.marker([aircraft.lat, aircraft.lon], { icon })
       .addTo(state.map)
-      .on('click', () => selectAircraft(aircraft));
+      .on('click', () => selectAircraft(aircraft))
+      .bindTooltip(`${clean(aircraft.callsign) || aircraft.hex}`, { permanent: false });
     
     state.markers.set(key, marker);
   }
 }
 
-function selectAircraft(aircraft, element) {
+function renderSidebar() {
+  const filtered = filterAircraft();
+  const list = document.getElementById('aircraftList');
+  list.innerHTML = '';
+  
+  filtered.slice(0, 50).forEach(aircraft => {
+    const item = document.createElement('div');
+    item.className = 'aircraft-item';
+    if (state.selected && state.selected.hex === aircraft.hex) {
+      item.classList.add('selected');
+    }
+    item.dataset.hex = aircraft.hex;
+    
+    const callsign = clean(aircraft.callsign) || clean(aircraft.registration) || aircraft.hex.toUpperCase();
+    const reg = clean(aircraft.registration) || '—';
+    const type = clean(aircraft.type) || 'Unknown';
+    const distance = state.user ? 
+      calculateDistance(state.user.lat, state.user.lon, aircraft.lat, aircraft.lon) : null;
+    
+    item.innerHTML = `
+      <div class="aircraft-callsign">${callsign}</div>
+      <div class="aircraft-details">
+        <div>${reg} • ${type}</div>
+        <div>${formatAlt(aircraft.altitude)} • ${formatSpeed(aircraft.speed)}</div>
+        ${distance ? `<div>${distance.toFixed(1)} km away</div>` : ''}
+      </div>
+    `;
+    
+    item.addEventListener('click', () => selectAircraft(aircraft));
+    list.appendChild(item);
+  });
+}
+
+function selectAircraft(aircraft) {
   state.selected = aircraft;
   
-  // Update selection
+  // Update sidebar selection
   document.querySelectorAll('.aircraft-item').forEach(el => {
     el.classList.remove('selected');
   });
-  if (element) element.classList.add('selected');
+  document.querySelector(`[data-hex="${aircraft.hex}"]`)?.classList.add('selected');
   
-  // Update marker
-  state.markers.forEach((marker, hex) => {
-    if (hex === aircraft.hex) {
-      marker.setIcon(L.divIcon({
-        className: 'aircraft-marker ' + (aircraft.isMilitary ? 'military' : 'civil') + ' selected',
-        html: '✈',
-        iconSize: [32, 32]
-      }));
-    }
-  });
+  // Update marker rotation
+  const marker = state.markers.get(aircraft.hex);
+  if (marker) {
+    const rotation = Number.isFinite(Number(aircraft.track)) ? Number(aircraft.track) : 0;
+    const icon = L.divIcon({
+      className: 'aircraft-marker',
+      html: `<div style="transform: rotate(${rotation}deg); font-size: 28px; filter: drop-shadow(0 0 8px rgba(0, 102, 255, 0.8));">✈</div>`,
+      iconSize: [28, 28],
+      iconAnchor: [14, 14]
+    });
+    marker.setIcon(icon);
+  }
   
   // Show info panel
   const panel = document.getElementById('infoPanel');
@@ -188,44 +211,25 @@ function selectAircraft(aircraft, element) {
   document.getElementById('infoOperator').textContent = clean(aircraft.operator) || '—';
   panel.classList.add('visible');
   
-  // Hide sidebar on mobile
-  closeSidebar();
+  // Center on aircraft
+  state.map.setView([aircraft.lat, aircraft.lon], 10);
 }
 
 function filterAircraft() {
   let list = state.aircraft;
-  const filter = document.querySelector('.filter-btn.active')?.dataset.filter || 'all';
   const query = document.getElementById('searchInput').value.toLowerCase();
-  
-  if (filter === 'civil') {
-    list = list.filter(a => !a.isMilitary);
-  } else if (filter === 'military') {
-    list = list.filter(a => a.isMilitary);
-  }
   
   if (query) {
     list = list.filter(a => {
       const callsign = clean(a.callsign).toLowerCase();
       const reg = clean(a.registration).toLowerCase();
       const hex = a.hex.toLowerCase();
-      return callsign.includes(query) || reg.includes(query) || hex.includes(query);
+      const operator = clean(a.operator).toLowerCase();
+      return callsign.includes(query) || reg.includes(query) || hex.includes(query) || operator.includes(query);
     });
   }
   
   return list;
-}
-
-function updateStats() {
-  document.getElementById('aircraftCount').textContent = `${state.aircraft.length} aircraft`;
-}
-
-function updateStatus(live, message = null) {
-  const status = document.getElementById('statusText');
-  if (live) {
-    status.textContent = 'Live · OpenSky';
-  } else {
-    status.textContent = message || 'Offline';
-  }
 }
 
 function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -242,7 +246,7 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 function formatAlt(feet) {
   if (!feet) return '—';
   const num = Number(feet);
-  if (num === 0) return 'GND';
+  if (num === 0) return 'Ground';
   return Math.round(num).toLocaleString() + ' ft';
 }
 
@@ -263,56 +267,77 @@ function clean(value) {
   return String(value || '').trim();
 }
 
-function toggleSidebar() {
-  document.getElementById('sidebar').classList.toggle('visible');
-}
-
-function closeSidebar() {
-  if (window.innerWidth <= 768) {
-    document.getElementById('sidebar').classList.remove('visible');
-  }
-}
-
 // Event Listeners
-document.getElementById('toggleSidebar').addEventListener('click', toggleSidebar);
+document.getElementById('searchInput').addEventListener('input', () => {
+  renderSidebar();
+});
 
-document.getElementById('settingsBtn').addEventListener('click', () => {
+document.getElementById('sidebarSearch').addEventListener('input', () => {
+  renderSidebar();
+});
+
+document.getElementById('listBtn').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+});
+
+document.getElementById('layersBtn').addEventListener('click', () => {
   document.getElementById('settingsModal').classList.add('show');
 });
 
 document.getElementById('saveSettings').addEventListener('click', () => {
+  const newMapType = document.getElementById('mapType').value;
   const settings = {
     updateFreq: parseInt(document.getElementById('updateFreq').value || POLL_MS),
-    weatherSource: document.getElementById('weatherSource').value
+    mapType: newMapType
   };
+  
   saveSettings(settings);
   state.settings = settings;
   
-  // Restart polling with new frequency
+  // Change map layer
+  if (newMapType !== state.mapType) {
+    state.map.removeLayer(state.currentLayer);
+    state.currentLayer = mapLayers[newMapType];
+    state.currentLayer.addTo(state.map);
+    state.mapType = newMapType;
+  }
+  
+  // Restart polling
   if (state.pollTimer) clearInterval(state.pollTimer);
   state.pollTimer = setInterval(loadAircraft, settings.updateFreq);
   
   document.getElementById('settingsModal').classList.remove('show');
 });
 
-document.querySelectorAll('.filter-btn').forEach(btn => {
-  btn.addEventListener('click', (e) => {
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    e.target.classList.add('active');
-    renderAircraft();
-  });
+document.getElementById('arBtn').addEventListener('click', () => {
+  if (!state.selected) {
+    alert('Please select an aircraft first');
+    return;
+  }
+  const reg = clean(state.selected.registration) || clean(state.selected.hex);
+  window.location.href = `ar.html?aircraft=${encodeURIComponent(reg)}`;
 });
 
-document.getElementById('searchInput').addEventListener('input', () => {
-  renderAircraft();
+document.getElementById('favBtn').addEventListener('click', () => {
+  alert('Favorites feature coming soon!');
 });
 
-// Close sidebar when clicking outside on mobile
+document.getElementById('volumeBtn').addEventListener('click', () => {
+  alert('Volume control coming soon!');
+});
+
+document.getElementById('compassBtn').addEventListener('click', () => {
+  if (state.user) {
+    state.map.setView([state.user.lat, state.user.lon], state.map.getZoom());
+  }
+});
+
+// Close sidebar when clicking outside
 document.addEventListener('click', (e) => {
   const sidebar = document.getElementById('sidebar');
-  const toggle = document.getElementById('toggleSidebar');
-  if (window.innerWidth <= 768 && !sidebar.contains(e.target) && !toggle.contains(e.target)) {
-    closeSidebar();
+  const listBtn = document.getElementById('listBtn');
+  if (window.innerWidth <= 768 && !sidebar.contains(e.target) && !listBtn.contains(e.target)) {
+    sidebar.classList.remove('open');
   }
 });
 
