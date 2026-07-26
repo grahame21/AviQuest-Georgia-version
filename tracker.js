@@ -33,8 +33,26 @@ const state = {
   lastRequestCentre: null,
   favourites: readStore('aviquest_favourites'),
   saved: readStore('aviquest_saved'),
-  settings: null
+  settings: loadSettingsLocal()
 };
+
+// Local Settings Management (no external module)
+function loadSettingsLocal() {
+  try {
+    const stored = localStorage.getItem('aviquest_tracker_settings');
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveSettingsLocal(settings) {
+  try {
+    localStorage.setItem('aviquest_tracker_settings', JSON.stringify(settings));
+  } catch {
+    console.error('Could not save settings');
+  }
+}
 
 function initialiseMap() {
   state.map = L.map('map', {
@@ -663,34 +681,7 @@ function debounce(fn, milliseconds) {
   };
 }
 
-// Settings Management
-function initializeSettings() {
-  state.settings = window.TrackerSettings ? window.TrackerSettings.loadSettings() : {};
-  
-  // Load header actions if settings panel exists
-  if (els.settingsBtn) {
-    els.settingsBtn.addEventListener('click', showSettings);
-  }
-  if (els.closeSettingsBtn) {
-    els.closeSettingsBtn.addEventListener('click', hideSettings);
-  }
-  if (els.saveSettingsBtn) {
-    els.saveSettingsBtn.addEventListener('click', saveSettings);
-  }
-  if (els.resetSettingsBtn) {
-    els.resetSettingsBtn.addEventListener('click', resetSettings);
-  }
-  
-  // Setup overlay toggles
-  document.querySelectorAll('.overlay-toggle').forEach(toggle => {
-    toggle.addEventListener('change', (e) => {
-      if (window.TrackerSettings) {
-        window.TrackerSettings.updateOverlay(e.target.dataset.overlay, e.target.checked);
-      }
-    });
-  });
-}
-
+// Settings Management - BUILT-IN (no external dependencies)
 function showSettings() {
   if (els.settingsPanel) {
     els.settingsPanel.classList.remove('hidden');
@@ -704,15 +695,13 @@ function hideSettings() {
 }
 
 function saveSettings() {
-  if (!window.TrackerSettings) return;
-  
   const settings = {
     mapView: els.mapViewSelect?.value || 'global',
     updateFrequency: parseInt(els.updateFreqSelect?.value || 5000),
     weatherSource: els.weatherSourceSelect?.value || 'bom'
   };
   
-  window.TrackerSettings.saveSettings(settings);
+  saveSettingsLocal(settings);
   setStatus('Settings saved!', true);
   hideSettings();
   
@@ -724,10 +713,8 @@ function saveSettings() {
 }
 
 function resetSettings() {
-  if (window.TrackerSettings) {
-    window.TrackerSettings.saveSettings(window.TrackerSettings.DEFAULT_SETTINGS);
-    location.reload();
-  }
+  saveSettingsLocal({});
+  location.reload();
 }
 
 // Event Listeners
@@ -769,6 +756,12 @@ els.navNearby.addEventListener('click', () => {
   els.aircraftList.classList.add('open');
 });
 
+// Settings Panel Events
+if (els.settingsBtn) els.settingsBtn.addEventListener('click', showSettings);
+if (els.closeSettingsBtn) els.closeSettingsBtn.addEventListener('click', hideSettings);
+if (els.saveSettingsBtn) els.saveSettingsBtn.addEventListener('click', saveSettings);
+if (els.resetSettingsBtn) els.resetSettingsBtn.addEventListener('click', resetSettings);
+
 // Click outside settings panel to close
 document.addEventListener('click', (e) => {
   if (els.settingsPanel && !els.settingsPanel.classList.contains('hidden')) {
@@ -778,8 +771,8 @@ document.addEventListener('click', (e) => {
   }
 });
 
+// Initialize
 initialiseMap();
-initializeSettings();
 updateSavedCounts();
 loadVisibleAircraft(true);
 getLocation(false);
