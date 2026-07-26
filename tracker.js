@@ -8,22 +8,18 @@ let state = {
   selected: null,
   user: null,
   pollTimer: null,
-  mapType: 'satellite',
+  mapType: 'apple',
   settings: loadSettings()
 };
 
 const mapLayers = {
-  satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+  apple: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
     maxZoom: 18,
-    attribution: '© Esri'
+    attribution: '© Apple'
   }),
-  terrain: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-    maxZoom: 17,
-    attribution: '© OpenStreetMap'
-  }),
-  street: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '© OpenStreetMap'
+  google: L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+    maxZoom: 20,
+    attribution: '© Google'
   })
 };
 
@@ -41,13 +37,15 @@ function saveSettings(settings) {
 
 function initMap() {
   state.map = L.map('map', {
-    zoomControl: true,
+    zoomControl: false,
     preferCanvas: true
-  }).setView([-25, 134], 4);
+  }).setView([-25, 134], 6);
   
-  // Add satellite layer by default
-  mapLayers.satellite.addTo(state.map);
-  state.currentLayer = mapLayers.satellite;
+  // Add Apple Maps by default
+  const initialMapType = state.settings.mapType || 'apple';
+  mapLayers[initialMapType].addTo(state.map);
+  state.currentLayer = mapLayers[initialMapType];
+  state.mapType = initialMapType;
 
   getLocation();
   loadAircraft();
@@ -96,7 +94,7 @@ async function loadAircraft(force = false) {
     renderAircraft();
     renderSidebar();
   } catch (error) {
-    console.error(error);
+    console.error('Error loading aircraft:', error);
   }
 }
 
@@ -121,7 +119,16 @@ function renderMarker(aircraft) {
   const rotation = Number.isFinite(Number(aircraft.track)) ? Number(aircraft.track) : 0;
   
   if (state.markers.has(key)) {
-    state.markers.get(key).setLatLng([aircraft.lat, aircraft.lon]);
+    const marker = state.markers.get(key);
+    marker.setLatLng([aircraft.lat, aircraft.lon]);
+    // Update rotation
+    const icon = L.divIcon({
+      className: 'aircraft-marker',
+      html: `<div style="transform: rotate(${rotation}deg); font-size: 24px;">✈</div>`,
+      iconSize: [24, 24],
+      iconAnchor: [12, 12]
+    });
+    marker.setIcon(icon);
   } else {
     const icon = L.divIcon({
       className: 'aircraft-marker',
@@ -130,10 +137,11 @@ function renderMarker(aircraft) {
       iconAnchor: [12, 12]
     });
     
+    const callsign = clean(aircraft.callsign) || clean(aircraft.registration) || aircraft.hex.toUpperCase();
     const marker = L.marker([aircraft.lat, aircraft.lon], { icon })
       .addTo(state.map)
       .on('click', () => selectAircraft(aircraft))
-      .bindTooltip(`${clean(aircraft.callsign) || aircraft.hex}`, { permanent: false });
+      .bindTooltip(callsign, { permanent: false });
     
     state.markers.set(key, marker);
   }
@@ -143,6 +151,11 @@ function renderSidebar() {
   const filtered = filterAircraft();
   const list = document.getElementById('aircraftList');
   list.innerHTML = '';
+  
+  if (filtered.length === 0) {
+    list.innerHTML = '<div style="padding: 16px; text-align: center; color: #999;">No aircraft found</div>';
+    return;
+  }
   
   filtered.slice(0, 50).forEach(aircraft => {
     const item = document.createElement('div');
@@ -181,7 +194,7 @@ function selectAircraft(aircraft) {
   });
   document.querySelector(`[data-hex="${aircraft.hex}"]`)?.classList.add('selected');
   
-  // Update marker rotation
+  // Update marker rotation and highlight
   const marker = state.markers.get(aircraft.hex);
   if (marker) {
     const rotation = Number.isFinite(Number(aircraft.track)) ? Number(aircraft.track) : 0;
@@ -211,13 +224,15 @@ function selectAircraft(aircraft) {
   document.getElementById('infoOperator').textContent = clean(aircraft.operator) || '—';
   panel.classList.add('visible');
   
-  // Center on aircraft
+  // Center on aircraft with slight offset
   state.map.setView([aircraft.lat, aircraft.lon], 10);
 }
 
 function filterAircraft() {
   let list = state.aircraft;
-  const query = document.getElementById('searchInput').value.toLowerCase();
+  const mainSearch = document.getElementById('searchInput').value.toLowerCase();
+  const sidebarSearch = document.getElementById('sidebarSearch').value.toLowerCase();
+  const query = mainSearch || sidebarSearch;
   
   if (query) {
     list = list.filter(a => {
@@ -229,7 +244,15 @@ function filterAircraft() {
     });
   }
   
-  return list;
+  return list.sort((a, b) => {
+    // Sort by distance if user location is available
+    if (state.user) {
+      const distA = calculateDistance(state.user.lat, state.user.lon, a.lat, a.lon);
+      const distB = calculateDistance(state.user.lat, state.user.lon, b.lat, b.lon);
+      return distA - distB;
+    }
+    return 0;
+  });
 }
 
 function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -294,7 +317,7 @@ document.getElementById('saveSettings').addEventListener('click', () => {
   saveSettings(settings);
   state.settings = settings;
   
-  // Change map layer
+  // Change map layer if different
   if (newMapType !== state.mapType) {
     state.map.removeLayer(state.currentLayer);
     state.currentLayer = mapLayers[newMapType];
@@ -329,6 +352,9 @@ document.getElementById('volumeBtn').addEventListener('click', () => {
 document.getElementById('compassBtn').addEventListener('click', () => {
   if (state.user) {
     state.map.setView([state.user.lat, state.user.lon], state.map.getZoom());
+  } else {
+    alert('Getting your location...');
+    getLocation();
   }
 });
 
@@ -338,6 +364,14 @@ document.addEventListener('click', (e) => {
   const listBtn = document.getElementById('listBtn');
   if (window.innerWidth <= 768 && !sidebar.contains(e.target) && !listBtn.contains(e.target)) {
     sidebar.classList.remove('open');
+  }
+});
+
+// Close info panel when clicking outside
+document.addEventListener('click', (e) => {
+  const panel = document.getElementById('infoPanel');
+  if (panel.classList.contains('visible') && !panel.contains(e.target) && e.target.id !== 'map') {
+    // Keep panel open
   }
 });
 
