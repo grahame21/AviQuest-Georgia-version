@@ -26,7 +26,6 @@
       grid-template-columns: 1fr;
     }
 
-    /* TOP SEARCH BAR */
     .top-bar {
       grid-row: 1;
       grid-column: 1;
@@ -69,7 +68,6 @@
       color: #999;
     }
 
-    /* MAP */
     #map {
       grid-row: 2;
       grid-column: 1;
@@ -78,7 +76,6 @@
       z-index: 1;
     }
 
-    /* BOTTOM CONTROLS */
     .bottom-bar {
       grid-row: 3;
       grid-column: 1;
@@ -120,7 +117,6 @@
       font-weight: 700;
     }
 
-    /* INFO PANEL */
     .info-panel {
       position: fixed;
       top: 70px;
@@ -138,9 +134,7 @@
       backdrop-filter: blur(10px);
     }
 
-    .info-panel.visible {
-      display: block;
-    }
+    .info-panel.visible { display: block; }
 
     .info-header {
       display: flex;
@@ -189,7 +183,6 @@
       color: #000;
     }
 
-    /* SIDEBAR LIST */
     .sidebar {
       position: fixed;
       left: 0;
@@ -206,9 +199,7 @@
       backdrop-filter: blur(20px);
     }
 
-    .sidebar.open {
-      transform: translateX(0);
-    }
+    .sidebar.open { transform: translateX(0); }
 
     .sidebar-header {
       padding: 16px;
@@ -261,9 +252,7 @@
       transition: all 0.2s;
     }
 
-    .aircraft-item:active {
-      background: #e0e0e0;
-    }
+    .aircraft-item:active { background: #e0e0e0; }
 
     .aircraft-item.selected {
       background: #0066ff;
@@ -282,144 +271,320 @@
       line-height: 1.4;
     }
 
-    /* SETTINGS MODAL */
-    .modal-overlay {
+    /* SETTINGS PANEL */
+    .settings-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.5);
+      background: rgba(0, 0, 0, 0.4);
       display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
+      z-index: 800;
+      backdrop-filter: blur(5px);
     }
 
-    .modal-overlay.show {
+    .settings-overlay.show { display: block; }
+
+    .settings-panel {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      max-height: 90vh;
+      background: rgba(20, 20, 30, 0.95);
+      border-radius: 20px 20px 0 0;
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      z-index: 900;
       display: flex;
+      flex-direction: column;
+      transform: translateY(100%);
+      transition: transform 0.3s ease;
+      box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.3);
     }
 
-    .modal {
-      background: white;
-      border-radius: 16px;
-      padding: 24px;
-      max-width: 400px;
-      width: 90%;
-      max-height: 80vh;
-      overflow-y: auto;
+    .settings-panel.show { transform: translateY(0); }
+
+    @media (min-width: 769px) {
+      .settings-panel {
+        bottom: auto;
+        top: 60px;
+        right: 12px;
+        left: auto;
+        max-width: 450px;
+        max-height: calc(100vh - 80px);
+        border-radius: 16px;
+      }
     }
 
-    .modal-title {
+    .settings-header {
+      padding: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .settings-title {
       font-size: 20px;
       font-weight: 700;
-      margin-bottom: 16px;
-      color: #000;
+      color: #fff;
     }
 
-    .modal-section {
-      margin-bottom: 16px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid #eee;
+    .settings-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #999;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
-    .modal-section:last-of-type {
+    .settings-tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 0 16px;
+      overflow-x: auto;
+    }
+
+    .settings-tab {
+      flex: 1;
+      min-width: 80px;
+      padding: 12px 16px;
+      background: none;
+      border: none;
+      color: #999;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 14px;
+      border-bottom: 2px solid transparent;
+      transition: all 0.3s;
+      white-space: nowrap;
+    }
+
+    .settings-tab.active {
+      color: #0066ff;
+      border-bottom-color: #0066ff;
+    }
+
+    .settings-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+    }
+
+    .settings-tab-content {
+      display: none;
+    }
+
+    .settings-tab-content.active {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .settings-section {
+      margin-bottom: 24px;
+    }
+
+    .settings-section-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #0066ff;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .settings-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .settings-row:last-child {
       border-bottom: none;
     }
 
-    .modal-label {
+    .settings-label {
+      font-size: 14px;
+      color: #fff;
+      font-weight: 500;
+    }
+
+    .settings-description {
       font-size: 12px;
       color: #999;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 8px;
-      display: block;
-      font-weight: 600;
+      margin-top: 4px;
     }
 
-    .modal-select,
-    .modal-input {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid #ddd;
+    .settings-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin: 12px 0;
+    }
+
+    .settings-card {
+      padding: 12px;
       border-radius: 8px;
-      font-size: 14px;
-      margin-bottom: 8px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.05);
+      cursor: pointer;
+      text-align: center;
+      font-size: 12px;
+      color: #999;
+      transition: all 0.2s;
     }
 
-    .modal-input {
-      font-family: monospace;
+    .settings-card:hover {
+      border-color: rgba(0, 102, 255, 0.5);
     }
 
-    .range-inputs {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
+    .settings-card.active {
+      background: rgba(0, 102, 255, 0.2);
+      border-color: #0066ff;
+      color: #0066ff;
     }
 
-    .range-inputs input {
+    .settings-toggle {
+      width: 50px;
+      height: 28px;
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.3s;
+    }
+
+    .settings-toggle::after {
+      content: '';
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      background: white;
+      border-radius: 50%;
+      top: 2px;
+      left: 2px;
+      transition: all 0.3s;
+    }
+
+    .settings-toggle.active {
+      background: #0066ff;
+    }
+
+    .settings-toggle.active::after {
+      left: 24px;
+    }
+
+    .settings-slider {
       width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.2);
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+      margin: 8px 0;
     }
 
-    .toggle-group {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-
-    .toggle-checkbox {
-      width: 20px;
-      height: 20px;
+    .settings-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #0066ff;
       cursor: pointer;
+      transition: all 0.2s;
     }
 
-    .toggle-label {
+    .settings-slider::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #0066ff;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+
+    .settings-select {
+      width: 100%;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      color: #fff;
       font-size: 14px;
       cursor: pointer;
-      flex: 1;
+      transition: all 0.2s;
     }
 
-    .modal-buttons {
+    .settings-select:hover {
+      border-color: rgba(0, 102, 255, 0.5);
+    }
+
+    .settings-select option {
+      background: #1a1a2e;
+      color: #fff;
+    }
+
+    .settings-buttons {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      gap: 12px;
       margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
     }
 
-    .modal-btn {
+    .settings-btn {
       padding: 12px;
       border: none;
       border-radius: 8px;
       font-weight: 600;
       cursor: pointer;
       font-size: 14px;
+      transition: all 0.2s;
     }
 
-    .modal-btn.primary {
+    .settings-btn.primary {
       background: #0066ff;
       color: white;
     }
 
-    .modal-btn.secondary {
-      background: #f0f0f0;
-      color: #000;
+    .settings-btn.primary:active {
+      background: #0052cc;
     }
 
-    /* HIDE LEAFLET CONTROLS */
-    .leaflet-control-zoom {
-      display: none !important;
+    .settings-btn.secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
-    .leaflet-control-attribution {
-      font-size: 10px !important;
-      background: rgba(255, 255, 255, 0.8) !important;
+    .settings-btn.secondary:active {
+      background: rgba(255, 255, 255, 0.2);
     }
 
-    /* FIX LEAFLET SIZING */
-    .leaflet-container {
-      background: #e8e8e8;
-    }
+    .leaflet-control-zoom { display: none !important; }
+    .leaflet-control-attribution { font-size: 10px !important; background: rgba(255, 255, 255, 0.8) !important; }
+    .leaflet-container { background: #e8e8e8; }
   </style>
 </head>
 <body>
-  <!-- TOP SEARCH BAR -->
   <div class="top-bar">
     <div class="search-box">
       <span class="search-icon">🔍</span>
@@ -427,10 +592,8 @@
     </div>
   </div>
 
-  <!-- MAP -->
   <div id="map"></div>
 
-  <!-- INFO PANEL -->
   <div class="info-panel" id="infoPanel">
     <div class="info-header">
       <div class="info-title" id="infoCallsign">AIRCRAFT</div>
@@ -464,16 +627,14 @@
     </div>
   </div>
 
-  <!-- BOTTOM CONTROLS -->
   <div class="bottom-bar">
     <button class="control-btn" id="favBtn" title="Favorites">♥</button>
     <button class="control-btn" id="listBtn" title="List">≡</button>
     <button class="control-btn ar" id="arBtn" title="AR Spotter">AR</button>
     <button class="control-btn" id="compassBtn" title="Compass">🧭</button>
-    <button class="control-btn" id="layersBtn" title="Layers">◫</button>
+    <button class="control-btn" id="settingsBtn" title="Settings">⚙</button>
   </div>
 
-  <!-- SIDEBAR LIST -->
   <div class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <div class="sidebar-title">Aircraft</div>
@@ -485,83 +646,385 @@
     <div class="aircraft-list" id="aircraftList"></div>
   </div>
 
-  <!-- SETTINGS MODAL -->
-  <div class="modal-overlay" id="settingsModal">
-    <div class="modal">
-      <div class="modal-title">Settings</div>
-      
-      <!-- MAP TYPE -->
-      <div class="modal-section">
-        <label class="modal-label">Map Type</label>
-        <select class="modal-select" id="mapType">
-          <option value="apple" selected>Apple Maps</option>
-          <option value="google">Google Maps</option>
-        </select>
-      </div>
+  <!-- SETTINGS PANEL -->
+  <div class="settings-overlay" id="settingsOverlay"></div>
+  <div class="settings-panel" id="settingsPanel">
+    <div class="settings-header">
+      <div class="settings-title">Settings</div>
+      <button class="settings-close" id="settingsPanelClose">✕</button>
+    </div>
 
-      <!-- UPDATE FREQUENCY -->
-      <div class="modal-section">
-        <label class="modal-label">Update Frequency</label>
-        <select class="modal-select" id="updateFreq">
-          <option value="1000">Every 1 second</option>
-          <option value="5000" selected>Every 5 seconds</option>
-          <option value="10000">Every 10 seconds</option>
-          <option value="30000">Every 30 seconds</option>
-        </select>
-      </div>
+    <div class="settings-tabs">
+      <button class="settings-tab active" data-tab="map">Map</button>
+      <button class="settings-tab" data-tab="visibility">Visibility</button>
+      <button class="settings-tab" data-tab="preferences">Preferences</button>
+    </div>
 
-      <!-- ALTITUDE FILTER -->
-      <div class="modal-section">
-        <label class="modal-label">Altitude Filter (ft)</label>
-        <div class="range-inputs">
-          <input type="number" id="altMin" class="modal-input" placeholder="Min" value="0">
-          <input type="number" id="altMax" class="modal-input" placeholder="Max" value="50000">
+    <div class="settings-content">
+      <!-- MAP TAB -->
+      <div class="settings-tab-content active" data-tab="map">
+        <div class="settings-section">
+          <div class="settings-section-title">Map Type</div>
+          <div class="settings-cards">
+            <div class="settings-card active" data-map="standard">Standard</div>
+            <div class="settings-card" data-map="satellite">Satellite</div>
+            <div class="settings-card" data-map="hybrid">Hybrid</div>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">Map Brightness</div>
+          <div class="settings-row">
+            <span class="settings-label">0%</span>
+            <input type="range" id="brightnesSlider" class="settings-slider" min="0" max="100" value="100">
+            <span class="settings-label">100%</span>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">Overlays</div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-label">Day/Night Terminator</div>
+              <div class="settings-description">Show real-time day/night line</div>
+            </div>
+            <button class="settings-toggle" id="terminatorToggle"></button>
+          </div>
+
+          <div class="settings-row">
+            <div>
+              <div class="settings-label">FIR/UIR Boundaries</div>
+              <div class="settings-description">Flight Information Regions</div>
+            </div>
+            <select class="settings-select" id="firSelect" style="width: auto;">
+              <option value="off">Off</option>
+              <option value="blue">Blue</option>
+              <option value="green">Green</option>
+              <option value="red">Red</option>
+            </select>
+          </div>
+
+          <div class="settings-row">
+            <div>
+              <div class="settings-label">Oceanic Tracks</div>
+              <div class="settings-description">NAT, Pacific, Flex Tracks</div>
+            </div>
+            <button class="settings-toggle" id="oceanicToggle"></button>
+          </div>
+
+          <div class="settings-row">
+            <div>
+              <div class="settings-label">Aeronautical Charts</div>
+              <div class="settings-description">Airways and navaids</div>
+            </div>
+            <select class="settings-select" id="chartsSelect" style="width: auto;">
+              <option value="off">Off</option>
+              <option value="navaids">Navaids</option>
+              <option value="low">Low Altitude Airways</option>
+              <option value="high">High Altitude Airways</option>
+            </select>
+          </div>
+
+          <div class="settings-row">
+            <div>
+              <div class="settings-label">Airport Pins</div>
+              <div class="settings-description">Show airports on map</div>
+            </div>
+            <button class="settings-toggle active" id="airportsToggle"></button>
+          </div>
+
+          <div class="settings-row">
+            <div>
+              <div class="settings-label">Show My Location</div>
+              <div class="settings-description">Display GPS position</div>
+            </div>
+            <button class="settings-toggle active" id="myLocationToggle"></button>
+          </div>
         </div>
       </div>
 
-      <!-- SPEED FILTER -->
-      <div class="modal-section">
-        <label class="modal-label">Speed Filter (kt)</label>
-        <div class="range-inputs">
-          <input type="number" id="speedMin" class="modal-input" placeholder="Min" value="0">
-          <input type="number" id="speedMax" class="modal-input" placeholder="Max" value="600">
+      <!-- VISIBILITY TAB -->
+      <div class="settings-tab-content" data-tab="visibility">
+        <div class="settings-section">
+          <div class="settings-section-title">Data Sources</div>
+          <div class="settings-row">
+            <div class="settings-label">ADS-B</div>
+            <button class="settings-toggle active" data-source="adsb"></button>
+          </div>
+          <div class="settings-row">
+            <div class="settings-label">MLAT</div>
+            <button class="settings-toggle active" data-source="mlat"></button>
+          </div>
+          <div class="settings-row">
+            <div class="settings-label">Space Based ADS-B</div>
+            <button class="settings-toggle" data-source="sbadsb"></button>
+          </div>
+          <div class="settings-row">
+            <div class="settings-label">ADS-C</div>
+            <button class="settings-toggle" data-source="adsc"></button>
+          </div>
+          <div class="settings-row">
+            <div class="settings-label">ASDE-X</div>
+            <button class="settings-toggle" data-source="asde"></button>
+          </div>
+          <div class="settings-row">
+            <div class="settings-label">UAT</div>
+            <button class="settings-toggle" data-source="uat"></button>
+          </div>
+          <div class="settings-row">
+            <div class="settings-label">Australia Radar</div>
+            <button class="settings-toggle" data-source="auradra"></button>
+          </div>
+          <div class="settings-row">
+            <div class="settings-label">Spidertracks</div>
+            <button class="settings-toggle" data-source="spider"></button>
+          </div>
+          <div class="settings-row">
+            <div class="settings-label">OGN / FLARM</div>
+            <button class="settings-toggle" data-source="ogn"></button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">Position Estimation</div>
+          <select class="settings-select" id="estimationSelect">
+            <option value="off">Off</option>
+            <option value="15">15 minutes</option>
+            <option value="30">30 minutes</option>
+            <option value="60">60 minutes</option>
+            <option value="120">120 minutes</option>
+            <option value="240">240 minutes</option>
+          </select>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">Types of Traffic</div>
+          <div class="settings-row">
+            <div class="settings-label">Airborne Aircraft</div>
+            <button class="settings-toggle active" data-traffic="airborne"></button>
+          </div>
+          <div class="settings-row">
+            <div class="settings-label">Aircraft On Ground</div>
+            <button class="settings-toggle active" data-traffic="ground"></button>
+          </div>
+          <div class="settings-row">
+            <div class="settings-label">Helicopters</div>
+            <button class="settings-toggle active" data-traffic="heli"></button>
+          </div>
+          <div class="settings-row">
+            <div class="settings-label">Military Aircraft</div>
+            <button class="settings-toggle active" data-traffic="military"></button>
+          </div>
+          <div class="settings-row">
+            <div class="settings-label">Business Jets</div>
+            <button class="settings-toggle active" data-traffic="biz"></button>
+          </div>
+          <div class="settings-row">
+            <div class="settings-label">General Aviation</div>
+            <button class="settings-toggle active" data-traffic="gen"></button>
+          </div>
+          <div class="settings-row">
+            <div class="settings-label">Cargo Aircraft</div>
+            <button class="settings-toggle active" data-traffic="cargo"></button>
+          </div>
+          <div class="settings-row">
+            <div class="settings-label">Gliders</div>
+            <button class="settings-toggle" data-traffic="glider"></button>
+          </div>
+          <div class="settings-row">
+            <div class="settings-label">Drones</div>
+            <button class="settings-toggle" data-traffic="drone"></button>
+          </div>
+          <div class="settings-row">
+            <div class="settings-label">Balloons</div>
+            <button class="settings-toggle" data-traffic="balloon"></button>
+          </div>
+          <div class="settings-row">
+            <div class="settings-label">Airport Vehicles</div>
+            <button class="settings-toggle" data-traffic="atveh"></button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">Map Labels</div>
+          <select class="settings-select" id="labelsSelect">
+            <option value="off">Off</option>
+            <option value="logo">Logo</option>
+            <option value="text" selected>Text Labels</option>
+          </select>
         </div>
       </div>
 
-      <!-- SHOW GROUND AIRCRAFT -->
-      <div class="modal-section">
-        <label class="modal-label">Display Options</label>
-        <div class="toggle-group">
-          <input type="checkbox" id="showGround" class="toggle-checkbox" checked>
-          <label for="showGround" class="toggle-label">Show Ground Aircraft</label>
+      <!-- PREFERENCES TAB -->
+      <div class="settings-tab-content" data-tab="preferences">
+        <div class="settings-section">
+          <div class="settings-section-title">Screen</div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-label">Keep Screen Awake</div>
+              <div class="settings-description">Prevent screen lock</div>
+            </div>
+            <button class="settings-toggle" id="screenAwakeToggle"></button>
+          </div>
         </div>
-        <div class="toggle-group">
-          <input type="checkbox" id="showMilitary" class="toggle-checkbox" checked>
-          <label for="showMilitary" class="toggle-label">Show Military</label>
+
+        <div class="settings-section">
+          <div class="settings-section-title">Features</div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-label">Aircraft Photos</div>
+              <div class="settings-description">Display photos when available</div>
+            </div>
+            <button class="settings-toggle active" id="photosToggle"></button>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-label">Live Activities</div>
+              <div class="settings-description">iPhone Live Activities</div>
+            </div>
+            <button class="settings-toggle" id="liveActivitiesToggle"></button>
+          </div>
         </div>
-      </div>
 
-      <!-- AIRCRAFT TYPE FILTER -->
-      <div class="modal-section">
-        <label class="modal-label">Aircraft Type Filter</label>
-        <input type="text" id="typeFilter" class="modal-input" placeholder="e.g., B777, A380, C172">
-      </div>
+        <div class="settings-section">
+          <div class="settings-section-title">Language</div>
+          <select class="settings-select" id="languageSelect">
+            <option value="en" selected>English</option>
+            <option value="es">Spanish</option>
+            <option value="fr">French</option>
+            <option value="de">German</option>
+            <option value="it">Italian</option>
+            <option value="pt">Portuguese</option>
+            <option value="zh">Chinese</option>
+            <option value="ja">Japanese</option>
+          </select>
+        </div>
 
-      <!-- CALLSIGN PATTERN -->
-      <div class="modal-section">
-        <label class="modal-label">Callsign Pattern</label>
-        <input type="text" id="callsignPattern" class="modal-input" placeholder="e.g., QF*, UAE* (use * as wildcard)">
-      </div>
+        <div class="settings-section">
+          <div class="settings-section-title">Units</div>
+          <div class="settings-row">
+            <div class="settings-label">Altitude</div>
+            <select class="settings-select" id="altitudeUnitSelect" style="width: auto;">
+              <option value="ft" selected>Feet</option>
+              <option value="m">Metres</option>
+            </select>
+          </div>
+          <div class="settings-row">
+            <div class="settings-label">Speed</div>
+            <select class="settings-select" id="speedUnitSelect" style="width: auto;">
+              <option value="kt" selected>Knots</option>
+              <option value="kmh">Km/h</option>
+              <option value="mph">MPH</option>
+            </select>
+          </div>
+          <div class="settings-row">
+            <div class="settings-label">Vertical Speed</div>
+            <select class="settings-select" id="vspeedUnitSelect" style="width: auto;">
+              <option value="fpm" selected>Feet Per Minute</option>
+              <option value="ms">Metres Per Second</option>
+            </select>
+          </div>
+          <div class="settings-row">
+            <div class="settings-label">Wind Speed</div>
+            <select class="settings-select" id="windUnitSelect" style="width: auto;">
+              <option value="kt" selected>Knots</option>
+              <option value="kmh">Km/h</option>
+              <option value="mph">MPH</option>
+              <option value="ms">M/s</option>
+            </select>
+          </div>
+          <div class="settings-row">
+            <div class="settings-label">Distance</div>
+            <select class="settings-select" id="distanceUnitSelect" style="width: auto;">
+              <option value="km" selected>Kilometres</option>
+              <option value="mi">Miles</option>
+              <option value="nm">Nautical Miles</option>
+            </select>
+          </div>
+          <div class="settings-row">
+            <div class="settings-label">Time Format</div>
+            <select class="settings-select" id="timeFormatSelect" style="width: auto;">
+              <option value="system">System</option>
+              <option value="12">12 Hour</option>
+              <option value="24" selected>24 Hour</option>
+            </select>
+          </div>
+          <div class="settings-row">
+            <div class="settings-label">Temperature</div>
+            <select class="settings-select" id="tempUnitSelect" style="width: auto;">
+              <option value="c" selected>Celsius</option>
+              <option value="f">Fahrenheit</option>
+            </select>
+          </div>
+          <div class="settings-row">
+            <div class="settings-label">Time Zone</div>
+            <select class="settings-select" id="timezoneSelect" style="width: auto;">
+              <option value="local" selected>Local</option>
+              <option value="utc">UTC</option>
+            </select>
+          </div>
+        </div>
 
-      <!-- BUTTONS -->
-      <div class="modal-buttons">
-        <button class="modal-btn secondary" onclick="document.getElementById('settingsModal').classList.remove('show')">Close</button>
-        <button class="modal-btn primary" id="saveSettings">Save</button>
+        <div class="settings-section">
+          <div class="settings-section-title">Privacy & Analytics</div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-label">Analytics</div>
+              <div class="settings-description">Help improve AviQuest</div>
+            </div>
+            <button class="settings-toggle active" id="analyticsToggle"></button>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-label">Crash Reporting</div>
+              <div class="settings-description">Send crash reports</div>
+            </div>
+            <button class="settings-toggle active" id="crashToggle"></button>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-label">Performance Monitoring</div>
+              <div class="settings-description">Monitor app performance</div>
+            </div>
+            <button class="settings-toggle active" id="performanceToggle"></button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">Legal</div>
+          <div class="settings-row" style="cursor: pointer; color: #0066ff;">
+            <div class="settings-label" style="color: #0066ff;">Terms of Service</div>
+          </div>
+          <div class="settings-row" style="cursor: pointer; color: #0066ff;">
+            <div class="settings-label" style="color: #0066ff;">Privacy Policy</div>
+          </div>
+          <div class="settings-row" style="cursor: pointer; color: #0066ff;">
+            <div class="settings-label" style="color: #0066ff;">Licences</div>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">About</div>
+          <div class="settings-row">
+            <div class="settings-label">Version</div>
+            <div class="settings-label" style="color: #0066ff;">1.0.0</div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-label">Build</div>
+            <div class="settings-label" style="color: #0066ff;">20260726</div>
+          </div>
+        </div>
+
+        <div class="settings-buttons">
+          <button class="settings-btn secondary" id="settingsResetBtn">Reset</button>
+          <button class="settings-btn primary" id="settingsSaveBtn">Save</button>
+        </div>
       </div>
     </div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="tracker.js?v=14"></script>
+  <script src="settings.js"></script>
+  <script src="tracker.js?v=15"></script>
 </body>
 </html>
